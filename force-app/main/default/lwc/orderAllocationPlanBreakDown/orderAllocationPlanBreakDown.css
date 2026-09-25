@@ -1,0 +1,80 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.summary-wrapper,
+.summary-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+}
+
+.card-box {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+/* Stat Cards */
+.stat-card {
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #eee;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+
+.stat-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.stat-subtitle {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+/* Card Specific Colors (Glassmorphism/Pastel vibe) */
+.card-reserved {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.card-transfer {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+}
+
+.card-procurement {
+    background-color: #faf5ff;
+    border-color: #e9d5ff;
+    color: #6b21a8;
+}
+
+.card-total {
+    background-color: #ecfeff;
+    border-color: #a5f3fc;
+    color: #0891b2;
+}

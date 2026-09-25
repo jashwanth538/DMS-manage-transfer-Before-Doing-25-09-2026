@@ -1,0 +1,369 @@
+<template>
+    <lightning-card class="trace-header-card" icon-name="standard:hierarchy">
+        <!-- Title & Action Toolbar -->
+        <div slot="title" class="slds-media slds-media_center">
+            <div class="slds-media__body">
+                <h2 class="slds-card__header-title slds-truncate">
+                    <span class="slds-text-heading_small slds-m-right_small">DMS Fulfillment Trace</span>
+                    <template if:true={summary}>
+                        <lightning-badge label={summary.rootRecordName} class="slds-m-right_xx-small"></lightning-badge>
+                        <lightning-badge label={summary.overallStatus}></lightning-badge>
+                    </template>
+                </h2>
+            </div>
+        </div>
+
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center">
+            <lightning-button-group class="slds-m-right_small">
+                <lightning-button 
+                    label="Expand All" 
+                    icon-name="utility:expand_alt" 
+                    onclick={handleExpandAll}
+                    disabled={isLoading}>
+                </lightning-button>
+                <lightning-button 
+                    label="Collapse All" 
+                    icon-name="utility:collapse_alt" 
+                    onclick={handleCollapseAll}
+                    disabled={isLoading}>
+                </lightning-button>
+                <lightning-button-icon 
+                    icon-name="utility:refresh" 
+                    alternative-text="Refresh Trace" 
+                    onclick={handleRefresh}
+                    disabled={isLoading}>
+                </lightning-button-icon>
+            </lightning-button-group>
+
+            <!-- Search input for ad-hoc record lookup -->
+            <div class="slds-form-element" style="width: 220px;">
+                <lightning-input 
+                    type="search" 
+                    variant="label-hidden" 
+                    placeholder="Search Record Name / ID" 
+                    value={searchInput}
+                    onchange={handleSearchChange}
+                    onkeyup={handleSearchKeyUp}>
+                </lightning-input>
+            </div>
+            <lightning-button 
+                label="Trace" 
+                variant="brand" 
+                class="slds-m-left_xx-small" 
+                onclick={handleSearch}
+                disabled={isLoading}>
+            </lightning-button>
+        </div>
+
+        <!-- Main Body -->
+        <div class="slds-card__body slds-card__body_inner slds-p-top_none">
+            <!-- Spinner -->
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading Fulfillment Trace" size="medium"></lightning-spinner>
+            </template>
+
+            <!-- Error Banner -->
+            <template if:true={errorMessage}>
+                <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert">
+                    <lightning-icon icon-name="utility:error" size="x-small" class="slds-m-right_x-small" variant="inverse"></lightning-icon>
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template if:true={hasData}>
+                <!-- KPI Metrics Ribbon -->
+                <div class="kpi-container">
+                    <div class="kpi-card kpi-card-required">
+                        <div class="kpi-label">Required Qty</div>
+                        <div class="kpi-value">{summary.totalRequiredQty}</div>
+                    </div>
+                    <div class="kpi-card kpi-card-reserved">
+                        <div class="kpi-label">Reserved</div>
+                        <div class="kpi-value">{summary.totalReservedQty}</div>
+                    </div>
+                    <div class="kpi-card kpi-card-transfer">
+                        <div class="kpi-label">Transfer</div>
+                        <div class="kpi-value">{summary.totalTransferQty}</div>
+                    </div>
+                    <div class="kpi-card kpi-card-procure">
+                        <div class="kpi-label">Procurement</div>
+                        <div class="kpi-value">{summary.totalProcurementQty}</div>
+                    </div>
+                    <div class="kpi-card kpi-card-received">
+                        <div class="kpi-label">Received Qty</div>
+                        <div class="kpi-value">{summary.totalReceivedQty}</div>
+                    </div>
+                    <div class="kpi-card kpi-card-remaining">
+                        <div class="kpi-label">Remaining</div>
+                        <div class="kpi-value">{summary.totalRemainingQty}</div>
+                    </div>
+                </div>
+
+                <!-- Quantity Reconciliation Banner -->
+                <div class={reconciliationBannerClass}>
+                    <div class="slds-grid slds-grid_vertical-align-center">
+                        <lightning-icon icon-name={reconciliationIcon} size="small" class="slds-m-right_small"></lightning-icon>
+                        <div>
+                            <div class="slds-text-title_bold">{reconciliationTitle}</div>
+                            <div class="slds-text-body_small">{reconciliationDescription}</div>
+                        </div>
+                    </div>
+                    <template if:true={summary.itemName}>
+                        <div class="slds-text-body_small slds-text-color_weak">
+                            Product: <strong>{summary.itemName}</strong> ({summary.itemCode})
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Two-Column Trace Viewport -->
+                <div class="trace-viewport">
+                    <!-- Left: Hierarchical Process Trace Canvas -->
+                    <div class="tree-canvas">
+                        <div class="slds-text-title_caps slds-m-bottom_small slds-text-color_weak">
+                            End-to-End Fulfillment Hierarchy
+                        </div>
+
+                        <template for:each={flattenedNodes} for:item="item">
+                            <div key={item.id} class={item.levelClass}>
+                                <div 
+                                    class={item.cardClass} 
+                                    data-id={item.id} 
+                                    onclick={handleNodeClick}>
+
+                                    <!-- Card Header Row -->
+                                    <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                        <div class="slds-grid slds-grid_vertical-align-center">
+                                            <!-- Expand / Collapse Toggle -->
+                                            <template if:true={item.hasChildren}>
+                                                <lightning-button-icon 
+                                                    icon-name={item.expandIcon} 
+                                                    size="x-small" 
+                                                    variant="bare" 
+                                                    class="slds-m-right_x-small" 
+                                                    data-id={item.id} 
+                                                    onclick={handleToggleExpand}>
+                                                </lightning-button-icon>
+                                            </template>
+
+                                            <!-- Node Type Badge -->
+                                            <span class={item.badgeClass}>{item.nodeType}</span>
+
+                                            <!-- Clickable Record Name -->
+                                            <a 
+                                                href="javascript:void(0);" 
+                                                class="record-link slds-m-left_small" 
+                                                data-id={item.id} 
+                                                onclick={handleNavigateRecord}>
+                                                {item.name}
+                                            </a>
+                                        </div>
+
+                                        <!-- Status Badge -->
+                                        <div>
+                                            <lightning-badge label={item.status}></lightning-badge>
+                                        </div>
+                                    </div>
+
+                                    <!-- Physical Movement Flow -->
+                                    <template if:true={item.physicalMovement}>
+                                        <div class="movement-ribbon">
+                                            <lightning-icon icon-name="utility:travel_and_places" size="xx-small"></lightning-icon>
+                                            <span>{item.physicalMovement}</span>
+                                        </div>
+                                    </template>
+
+                                    <!-- Quantity Summary Pills -->
+                                    <div class="qty-pills">
+                                        <template if:true={item.requestedQty}>
+                                            <span class="qty-pill">Req: {item.requestedQty}</span>
+                                        </template>
+                                        <template if:true={item.reservedQty}>
+                                            <span class="qty-pill">Reserved: {item.reservedQty}</span>
+                                        </template>
+                                        <template if:true={item.transferPlannedQty}>
+                                            <span class="qty-pill">Transfer: {item.transferPlannedQty}</span>
+                                        </template>
+                                        <template if:true={item.procurementPlannedQty}>
+                                            <span class="qty-pill">Procure: {item.procurementPlannedQty}</span>
+                                        </template>
+                                        <template if:true={item.receivedQty}>
+                                            <span class="qty-pill">Received: {item.receivedQty}</span>
+                                        </template>
+                                        <template if:true={item.remainingQty}>
+                                            <span class="qty-pill">Remaining: {item.remainingQty}</span>
+                                        </template>
+                                    </div>
+
+                                    <!-- Why Is This Record Here Tag -->
+                                    <div class="reason-tag">
+                                        <lightning-icon icon-name="utility:link" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        {item.relationshipReason}
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Right: Sticky Record Inspector Drawer -->
+                    <div class="inspector-drawer">
+                        <template if:true={selectedNode}>
+                            <div class="inspector-header slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                <div>
+                                    <div class="slds-text-title_caps slds-text-color_weak">Record Inspector</div>
+                                    <div class="slds-text-heading_small slds-truncate"><strong>{selectedNode.name}</strong></div>
+                                </div>
+                                <lightning-button 
+                                    label="Open" 
+                                    icon-name="utility:new_window" 
+                                    size="small" 
+                                    variant="neutral" 
+                                    onclick={handleNavigateSelected}>
+                                </lightning-button>
+                            </div>
+
+                            <div class="slds-p-around_medium">
+                                <!-- "Why Is This Record Here?" Card -->
+                                <div class="why-card">
+                                    <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                                        <lightning-icon icon-name="utility:info" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        <strong>Why is this record here?</strong>
+                                    </div>
+                                    <div>{selectedNode.relationshipReason}</div>
+                                </div>
+
+                                <!-- Physical Movement Section -->
+                                <div class="slds-m-bottom_medium">
+                                    <div class="slds-text-title_caps slds-m-bottom_xx-small slds-text-color_weak">Direction of Movement</div>
+                                    <table class="detail-table">
+                                        <tbody>
+                                            <tr>
+                                                <td>From Account</td>
+                                                <td>{selectedNode.supplyingAccount}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>To Account</td>
+                                                <td>{selectedNode.requestingAccount}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Source Location</td>
+                                                <td>{selectedNode.sourceLocation}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Target Location</td>
+                                                <td>{selectedNode.targetLocation}</td>
+                                            </tr>
+                                            <template if:true={selectedNode.physicalMovement}>
+                                                <tr>
+                                                    <td>Movement Path</td>
+                                                    <td><strong style="color: #0176d3;">{selectedNode.physicalMovement}</strong></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Quantities Breakdown -->
+                                <div class="slds-m-bottom_medium">
+                                    <div class="slds-text-title_caps slds-m-bottom_xx-small slds-text-color_weak">Quantities Breakdown</div>
+                                    <table class="detail-table">
+                                        <tbody>
+                                            <tr>
+                                                <td>Requested / Ordered</td>
+                                                <td>{selectedNode.requestedQty}</td>
+                                            </tr>
+                                            <template if:true={selectedNode.reservedQty}>
+                                                <tr>
+                                                    <td>Reserved Qty</td>
+                                                    <td>{selectedNode.reservedQty}</td>
+                                                </tr>
+                                            </template>
+                                            <template if:true={selectedNode.transferPlannedQty}>
+                                                <tr>
+                                                    <td>Transfer Planned</td>
+                                                    <td>{selectedNode.transferPlannedQty}</td>
+                                                </tr>
+                                            </template>
+                                            <template if:true={selectedNode.transferReceivedQty}>
+                                                <tr>
+                                                    <td>Transfer Received</td>
+                                                    <td>{selectedNode.transferReceivedQty}</td>
+                                                </tr>
+                                            </template>
+                                            <template if:true={selectedNode.procurementPlannedQty}>
+                                                <tr>
+                                                    <td>Procurement Planned</td>
+                                                    <td>{selectedNode.procurementPlannedQty}</td>
+                                                </tr>
+                                            </template>
+                                            <template if:true={selectedNode.procurementReceivedQty}>
+                                                <tr>
+                                                    <td>Procurement Received</td>
+                                                    <td>{selectedNode.procurementReceivedQty}</td>
+                                                </tr>
+                                            </template>
+                                            <tr>
+                                                <td>Total Received</td>
+                                                <td><strong>{selectedNode.receivedQty}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Remaining Qty</td>
+                                                <td><strong style="color: #ba0517;">{selectedNode.remainingQty}</strong></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Key Record Attributes -->
+                                <div>
+                                    <div class="slds-text-title_caps slds-m-bottom_xx-small slds-text-color_weak">Record Attributes</div>
+                                    <table class="detail-table">
+                                        <tbody>
+                                            <tr>
+                                                <td>Object Type</td>
+                                                <td>{selectedNode.sObjectType}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Node Role</td>
+                                                <td>{selectedNode.nodeType}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Status</td>
+                                                <td>{selectedNode.status}</td>
+                                            </tr>
+                                            <template if:true={selectedNode.itemName}>
+                                                <tr>
+                                                    <td>Product</td>
+                                                    <td>{selectedNode.itemName}</td>
+                                                </tr>
+                                            </template>
+                                            <template for:each={selectedNodeAttributes} for:item="attr">
+                                                <tr key={attr.label}>
+                                                    <td>{attr.label}</td>
+                                                    <td>{attr.value}</td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Empty State -->
+            <template if:false={hasData}>
+                <template if:false={isLoading}>
+                    <div class="slds-illustration slds-illustration_small slds-m-vertical_large">
+                        <div class="slds-text-longform">
+                            <h3 class="slds-text-heading_medium">No Fulfillment Trace Loaded</h3>
+                            <p class="slds-text-body_regular">
+                                Enter a Supply Request Name (e.g. <code>SR-00001</code>), Order Allocation Line (<code>OALI-00001</code>), or Order Allocation (<code>OA-00001</code>) in the search box above to visualize its complete fulfillment journey.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>

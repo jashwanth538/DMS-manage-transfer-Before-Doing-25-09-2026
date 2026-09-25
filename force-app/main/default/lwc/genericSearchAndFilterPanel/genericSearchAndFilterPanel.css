@@ -1,0 +1,95 @@
+:host {
+    display: block;
+}
+
+.search-filter-panel {
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.search-filter-panel:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.panel-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+}
+
+.panel-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.025em;
+}
+
+/* Rounded and transition effects for inputs */
+.search-input-field :deep(input) {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.search-input-field :deep(input:focus) {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+.search-column-combobox :deep(button),
+.filter-combobox :deep(button) {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.search-column-combobox :deep(button:focus),
+.filter-combobox :deep(button:focus) {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Custom reset button stylings */
+.reset-btn-custom {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    padding: 0.45rem 1rem !important;
+    height: 36px !important;
+    transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center;
+    width: 100%;
+}
+
+.reset-btn-custom:hover {
+    background-color: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #1e293b !important;
+}
+
+.reset-btn-custom:active {
+    background-color: #e2e8f0 !important;
+}
+
+.reset-icon {
+    --slds-c-icon-color-foreground: #64748b;
+    transition: transform 0.4s ease;
+}
+
+.reset-btn-custom:hover .reset-icon {
+    transform: rotate(180deg);
+    --slds-c-icon-color-foreground: #1e293b;
+}
+
+@media (max-width: 768px) {
+    .action-btn-col {
+        text-align: left !important;
+        margin-top: 8px;
+    }
+}

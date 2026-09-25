@@ -1,0 +1,348 @@
+<template>
+    <div class="supply-planning-container slds-p-around_medium" style="display: contents;">
+
+        <!-- Header Panel -->
+        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center header-section"
+            style="grid-area: header; margin-bottom: 4px;">
+            <div>
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-orders" title="Supply Planning">
+                            <svg class="slds-icon slds-icon_large" aria-hidden="true">
+                                <use xlink:href="/_slds/icons/standard-sprite/svg/symbols.svg#orders"></use>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <h1 class="slds-text-heading_medium slds-truncate font-weight-bold" title="Supply Planning">
+                            Sales Allocation Planner </h1>
+                        <p class="slds-text-body_small slds-line-height_reset subtitle-text">Plan inventory allocation
+                            and view Sales Allocation summaries</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Actions Column -->
+            <div class="slds-grid slds-grid_vertical-align-center slds-gutters_small">
+                <!-- Autocomplete Search Input -->
+                <template if:true={showSearchInput}>
+                    <div class="slds-col search-box-container">
+                        <div class="slds-form-element">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_left-right">
+                                <lightning-icon icon-name="utility:search" size="x-small"
+                                    class="slds-icon slds-input__icon slds-input__icon_left">
+                                </lightning-icon>
+                                <input type="text" class="slds-input search-input"
+                                    placeholder="Search Sales Allocation Number or Name..." value={searchKey}
+                                    oninput={handleSearchChange} onfocus={handleSearchFocus}
+                                    onblur={handleSearchBlur} />
+                                <template if:true={selectedPlan}>
+                                    <button class="slds-button slds-button_icon slds-input__icon slds-input__icon_right"
+                                        title="Clear" onclick={handleClearSearch}>
+                                        <lightning-icon icon-name="utility:clear" size="x-small"></lightning-icon>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Suggestions Dropdown -->
+                        <template if:true={showSuggestions}>
+                            <div class="suggestions-dropdown">
+                                <ul class="slds-listbox slds-listbox_vertical" role="presentation">
+                                    <template if:true={hasSuggestions}>
+                                        <template for:each={suggestions} for:item="plan">
+                                            <li key={plan.Id} role="presentation" class="slds-listbox__item"
+                                                onmousedown={handleSelectPlan} data-id={plan.Id}>
+                                                <div class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta"
+                                                    role="option">
+                                                    <span class="slds-media__figure slds-listbox__option-icon">
+                                                        <span class="slds-icon_container slds-icon-standard-orders">
+                                                            <lightning-icon icon-name="standard:orders"
+                                                                size="small"></lightning-icon>
+                                                        </span>
+                                                    </span>
+                                                    <span class="slds-media__body">
+                                                        <span
+                                                            class="slds-listbox__option-text slds-listbox__option-text_entity">{plan.Name}</span>
+                                                        <span
+                                                            class="slds-listbox__option-meta slds-listbox__option-meta_entity">
+                                                            Location: {plan.InventoryLocationName} | Status:
+                                                            {plan.Status__c}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            </li>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasSuggestions}>
+                                        <li class="slds-p-around_small slds-text-align_center slds-text-color_weak">
+                                            No plans found matching "{searchKey}"
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Action Buttons -->
+                <div class="slds-col slds-grid">
+                    <!-- <button class="slds-button slds-button_neutral slds-m-right_x-small" onclick={handleRefresh} disabled={isNotPlanSelected}>
+                        <lightning-icon icon-name="utility:refresh" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                        Refresh
+                    </button> -->
+                    <template if:false={isConfirmHidden}>
+                        <div title={confirmPlanTooltip} style="display: inline-block;">
+                            <button class="slds-button class-confirm slds-button_brand" onclick={handleConfirmPlan}
+                                disabled={isConfirmDisabled}>
+                                <lightning-icon icon-name="utility:check" size="x-small" class="slds-m-right_xx-small"
+                                    variant="inverse"></lightning-icon>
+                                Confirm Plan
+                            </button>
+                        </div>
+                    </template>
+                    <template if:true={isManageTransferVisible}>
+                        <button class="slds-button slds-button_success" onclick={handleManageTransfer}>
+                            <lightning-icon icon-name="utility:open" size="x-small" class="slds-m-right_xx-small"
+                                variant="inverse"></lightning-icon>
+                            Manage Transfer
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Card -->
+        <template if:true={selectedPlan}>
+            <div class="slds-card dashboard-card slds-p-horizontal_medium slds-p-vertical_small fade-in" style="grid-area: dashboard;">
+                <div class="dashboard-flex-container">
+
+                    <!-- Left Section: Details Row -->
+                    <div class="details-row">
+                        <div class="detail-col">
+                            <span class="detail-label" title="Sales Allocation">Sales Allocation</span>
+                            <div class="detail-value">
+                                <a href="#" onclick={navigateToRecord} target="_blank" rel="noopener noreferrer"
+                                    class="link-styled font-weight-bold" title={selectedPlan.Name}>{selectedPlan.Name}</a>
+                            </div>
+                        </div>
+                        <div class="detail-col">
+                            <span class="detail-label" title="Requesting Account">Requesting Account</span>
+                            <div class="detail-value text-truncate">
+                                <template if:true={selectedPlan.Requesting_Account__c}>
+                                    <a href="#" onclick={navigateToRequestingAccount} target="_blank" rel="noopener noreferrer"
+                                        class="link-styled" title={selectedPlan.RequestingAccountName}>{selectedPlan.RequestingAccountName}</a>
+                                </template>
+                                <template if:false={selectedPlan.Requesting_Account__c}>
+                                    <span class="slds-text-color_weak">-</span>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="detail-col">
+                            <span class="detail-label" title="Supplying Account">Supplying Account</span>
+                            <div class="detail-value text-truncate">
+                                <template if:true={selectedPlan.Supplying_Account__c}>
+                                    <a href="#" onclick={navigateToSupplyingAccount} target="_blank" rel="noopener noreferrer"
+                                        class="link-styled" title={selectedPlan.SupplyingAccountName}>{selectedPlan.SupplyingAccountName}</a>
+                                </template>
+                                <template if:false={selectedPlan.Supplying_Account__c}>
+                                    <span class="slds-text-color_weak">-</span>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="detail-col">
+                            <span class="detail-label" title="Status">Status</span>
+                            <div class="status-value">
+                                <span class={statusBadgeClass}>{selectedPlanStatus}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Divider -->
+                    <div class="vertical-divider"></div>
+
+                    <!-- Right Section: Metric Cards -->
+                    <div class="metrics-container">
+                        <div class="metric-card">
+                            <span class="metric-label">Total Lines</span>
+                            <span class="metric-value">{totalLines}</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Total Required Qty</span>
+                            <span class="metric-value">{totalRequiredQty}</span>
+                        </div>
+
+                        <!-- Circular Progress Gauge -->
+                        <div class="gauge-container">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                                <path class="circle-bg"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class={circleStrokeClass} stroke-dasharray={coverageDashArray}
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <text x="18" y="19" class="percentage-text">{coveragePercentText}</text>
+                                <text x="18" y="27" class="label-text">{coverageLabelText}</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line Items Details Card (Commented out)
+            <template if:true={hasLineItems}>
+                <div class="slds-card line-items-card slds-p-around_medium fade-in" style="grid-area: lineitems; margin-top: 0;">
+                    <div class="card-header slds-m-bottom_medium">
+                        <h2 class="slds-text-heading_small font-weight-bold">1. Supply Plan Line Items ({totalLines})</h2>
+                    </div>
+                    <div class="slds-scrollable_x">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered table-custom">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Line Item">Line Item</div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Item">Item</div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Quantity">Quantity</div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Coverage">Coverage</div>
+                                    </th>
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Status">Status</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={lineItems} for:item="item">
+                                    <tr key={item.Id} class="slds-hint-parent">
+                                        <td>
+                                            <div class="slds-truncate">
+                                                <a href="#" onclick={navigateToLineItem} data-id={item.Id} class="link-styled font-weight-bold">{item.Name}</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-truncate slds-text-color_regular">{item.ItemName}</div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-truncate slds-text-color_regular">{item.Quantity}</div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-grid slds-grid_vertical-align-center">
+                                                <div class="slds-progress-bar slds-progress-bar_x-small progress-bar-container" aria-valuemin="0" aria-valuemax="100" aria-valuenow={item.Coverage} role="progressbar">
+                                                    <span class={item.progressBarClass} style={item.coverageStyle}></span>
+                                                </div>
+                                                <span class="slds-m-left_small coverage-value">{item.Coverage}%</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class={item.statusBadgeClass}>{item.Status}</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+            -->
+
+            <!-- Inventory Availability Card (Commented out)
+            <template if:true={hasInventory}>
+                <div class="slds-card line-items-card slds-p-around_medium fade-in" style="grid-area: inventory; margin-top: 0;">
+                    [Header with Title and Dropdown]
+                    <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_medium">
+                        <div class="slds-grid slds-grid_vertical-align-center">
+                            <h2 class="slds-text-heading_small font-weight-bold">2. Inventory Availability</h2>
+                            <lightning-icon icon-name="utility:info" size="xx-small" class="slds-m-left_xx-small info-icon-custom" title="Inventory quantities per item across locations"></lightning-icon>
+                        </div>
+                        <div class="warehouse-filter-combobox">
+                            <lightning-combobox
+                                name="warehouseFilter"
+                                value={selectedWarehouse}
+                                variant="label-hidden"
+                                options={warehouseOptions}
+                                onchange={handleWarehouseChange}
+                                class="combobox-custom">
+                            </lightning-combobox>
+                        </div>
+                    </div>
+                    
+                    [Table]
+                    <div class="slds-scrollable_x">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered table-custom">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Warehouse">Warehouse</div>
+                                    </th>
+                                    <template for:each={inventoryHeaders} for:item="header">
+                                        <th scope="col" key={header.id}>
+                                            <div class="slds-truncate table-header" title={header.label}>{header.label}</div>
+                                        </th>
+                                    </template>
+                                    <th scope="col">
+                                        <div class="slds-truncate table-header" title="Total Available">Total Available</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={inventoryRows} for:item="row">
+                                    <tr key={row.locationId} class="slds-hint-parent">
+                                        <td>
+                                            <div class="slds-truncate slds-text-color_regular font-weight-semibold">{row.locationName}</div>
+                                        </td>
+                                        <template for:each={row.itemAvailabilities} for:item="avail">
+                                            <td key={avail.productId}>
+                                                <div class="slds-truncate slds-text-color_regular">{avail.quantity}</div>
+                                            </td>
+                                        </template>
+                                        <td>
+                                            <div class="slds-grid slds-grid_vertical-align-center">
+                                                <span class="slds-m-right_small total-avail-value font-weight-bold">{row.totalAvailable}</span>
+                                                <div class="slds-progress-bar slds-progress-bar_x-small progress-bar-container" aria-valuemin="0" aria-valuemax="100" aria-valuenow={row.totalAvailable} role="progressbar">
+                                                    <span class={row.progressBarClass} style={row.progressStyle}></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                                
+                                [Totals Row]
+                                <tr class="totals-row font-weight-bold">
+                                    <td>
+                                        <div class="slds-truncate">Total Available</div>
+                                    </td>
+                                    <template for:each={inventoryTotals.itemAvailabilities} for:item="total">
+                                        <td key={total.productId}>
+                                            <div class="slds-truncate">{total.quantity}</div>
+                                        </td>
+                                    </template>
+                                    <td>
+                                        <div class="slds-truncate">{inventoryTotals.totalAvailable}</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+            -->
+        </template>
+
+        <!-- Empty / Search Invitation State -->
+        <template if:false={selectedPlan}>
+            <div class="slds-card slds-align_absolute-center empty-state-card slds-p-around_large text-center"
+                style="grid-area: lineitems;">
+                <!-- <div class="slds-p-around_large">
+                    <lightning-icon icon-name="utility:search" size="large" class="empty-icon slds-m-bottom_medium"></lightning-icon>
+                    <h2 class="slds-text-heading_medium slds-m-bottom_small font-weight-bold">Search for a Supply Plan</h2>
+                    <p class="slds-text-body_regular slds-text-color_weak slds-m-bottom_medium max-width-350">
+                        Enter a supply plan name/number in the search bar above to load its details, metrics summary, and status indicators.
+                    </p>
+                </div> -->
+            </div>
+        </template>
+    </div>
+</template>

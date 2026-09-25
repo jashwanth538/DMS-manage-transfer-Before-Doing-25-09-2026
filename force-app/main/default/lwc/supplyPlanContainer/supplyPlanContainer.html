@@ -1,0 +1,29 @@
+<template>
+    <div class="supply-plan-dashboard">
+        <!-- Search, Header, Details, 1. Line Items, 2. Inventory Availability -->
+        <c-supply-plan-search record-id={activePlanId} onplanselected={handlePlanSelected}></c-supply-plan-search>
+        
+        <template if:true={hasActivePlan}>
+            <!-- Unified Section: Line Items and Planner -->
+            <div class="unified-row-card">
+                <!-- 1. Supply Plan Line Items -->
+                <c-order-allocation-line-items-component record-id={activePlanId}></c-order-allocation-line-items-component>
+                
+                <!-- 4. Build Supply Plan Grid -->
+                <c-supply-order-planner record-id={activePlanId}></c-supply-order-planner>
+            </div>
+            
+            <!-- 5. Supply Plan Details -->
+            <c-order-allocation-plan-details-component record-id={activePlanId}></c-order-allocation-plan-details-component>
+
+            <!-- Unified Bottom Section: Coverage Summary & Breakdown -->
+            <div class="unified-row-card unified-bottom-row">
+                <!-- 3. Coverage Summary -->
+                <c-supplyplansummary record-id={activePlanId}></c-supplyplansummary>
+
+                <!-- Supply Plan Breakdown -->
+                <c-order-allocation-plan-break-down record-id={activePlanId}></c-order-allocation-plan-break-down>
+            </div>
+        </template>
+    </div>
+</template>

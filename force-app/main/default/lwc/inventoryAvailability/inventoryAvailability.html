@@ -1,0 +1,301 @@
+<template>
+    <!-- Direct Inventory Details Modal (Image 1) -->
+    <template if:true={isModal}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading-01"
+            class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate" style="font-weight: 600; color: #1e293b;">
+                        Inventory Details
+                    </h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_large" id="modal-content-id-1">
+                    <template if:true={isLoading}>
+                        <div class="spinner-container" style="min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                            <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                        </div>
+                    </template>
+                    <template if:false={isLoading}>
+                        <template if:true={hasError}>
+                            <div class="error-state">
+                                <lightning-icon icon-name="utility:error" alternative-text="Error" variant="error"></lightning-icon>
+                                <p class="slds-m-top_x-small">{errorMessage}</p>
+                            </div>
+                        </template>
+                        <template if:false={hasError}>
+                            <!-- Product Header -->
+                            <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_large">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Product Name</span>
+                                    <p class="product-title">{modalData.productName}</p>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Product Code</span>
+                                    <p class="product-title">{modalData.productCode}</p>
+                                </div>
+                            </div>
+
+                            <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_large">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Warehouse / Location</span>
+                                    <p class="product-title">{modalData.locationName}</p>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Product Family</span>
+                                    <p class="product-title">{modalData.productFamily}</p>
+                                </div>
+                            </div>
+
+                            <!-- Inventory Metrics -->
+                            <div class="slds-grid slds-wrap slds-gutters">
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">AVAILABLE</div>
+                                        <div class="metric-value available-value">{modalData.qty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">ON HAND</div>
+                                        <div class="metric-value">{modalData.onHandQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">RESERVED SALE ORDER</div>
+                                        <div class="metric-value reserved-value">{modalData.reservedSaleOrderQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">RESERVED TRANSFER</div>
+                                        <div class="metric-value reserved-value">{modalData.reservedTransferQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">DAMAGED</div>
+                                        <div class="metric-value">{modalData.damagedQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">TRANSIT IN</div>
+                                        <div class="metric-value transit-value">{modalData.transitInQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">TRANSIT OUT</div>
+                                        <div class="metric-value transit-value">{modalData.transitOutQty}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral close-btn" onclick={closeModal}>
+                        Close
+                    </button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <!-- Standard View (when embedded in a page/dashboard) -->
+    <template if:false={isModal}>
+        <div class="inventory-container">
+            <header
+                class="inventory-header slds-p-horizontal_medium slds-p-vertical_small slds-grid slds-grid_vertical-align-center slds-grid_align-spread">
+                <h2 class="title-bold">Inventory Availability</h2>
+                <div class="search-container slds-col slds-size_1-of-2">
+                    <c-generic-search label="Search Products" placeholder="By Name, Code or Family..."
+                        onsearch={handleSearch}>
+                    </c-generic-search>
+                </div>
+            </header>
+
+            <div class="inventory-body slds-p-around_medium">
+                <template if:true={isLoading}>
+                    <div class="spinner-container">
+                        <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                    </div>
+                </template>
+
+                <template if:true={hasError}>
+                    <div class="error-state">
+                        <lightning-icon icon-name="utility:error" alternative-text="Error" variant="error"></lightning-icon>
+                        <p class="slds-m-top_x-small">{errorMessage}</p>
+                    </div>
+                </template>
+
+                <template if:false={isLoading}>
+                    <template if:false={hasError}>
+                        <!-- No data state -->
+                        <template if:false={displayedTableData.length}>
+                            <div class="empty-state">
+                                <lightning-icon icon-name="utility:info" alternative-text="No data"
+                                    size="medium"></lightning-icon>
+                                <p class="slds-m-top_small">No inventory availability matched for this Order Allocation.</p>
+                            </div>
+                        </template>
+
+                        <!-- Table Layout -->
+                        <template if:true={displayedTableData.length}>
+                            <div class="table-wrapper">
+                                <table class="inventory-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="table-header-cell">Product Name</th>
+                                            <template for:each={locationHeaders} for:item="loc">
+                                                <th key={loc.id} class="table-header-cell">{loc.name}</th>
+                                            </template>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={displayedTableData} for:item="row">
+                                            <tr key={row.id} class="table-row">
+                                                <td class="table-cell product-cell">
+                                                    <span class="product-name">{row.productName}</span>
+                                                </td>
+                                                <template for:each={row.cells} for:item="cell">
+                                                    <td key={cell.id} class="table-cell">
+                                                        <template if:true={cell.hasData}>
+                                                            <div class="cell-content">
+                                                                <div class="qty-badge">{cell.qty}</div>
+                                                                <button class="subtle-btn" data-product-id={cell.productId}
+                                                                    data-location-id={cell.locationId}
+                                                                    onclick={handleDetailsAction}>
+                                                                    View details
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                        <template if:false={cell.hasData}>
+                                                            <div class="no-inventory-cell">
+                                                                <div class="na-text">N/A</div>
+                                                                <div class="desc-text">Item not available for that location</div>
+                                                            </div>
+                                                        </template>
+                                                    </td>
+                                                </template>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </template>
+                </template>
+            </div>
+
+            <!-- Inventory Details Modal (for embedded table View details click) -->
+            <template if:true={isModalOpen}>
+                <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading-02"
+                    class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <h2 id="modal-heading-02" class="slds-text-heading_medium slds-hyphenate">Inventory Details</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_large" id="modal-content-id-2">
+                            <!-- Product Header -->
+                            <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_large">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Product Name</span>
+                                    <p class="product-title">{modalData.productName}</p>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Product Code</span>
+                                    <p class="product-title">{modalData.productCode}</p>
+                                </div>
+                            </div>
+
+                            <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_large">
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Warehouse / Location</span>
+                                    <p class="product-title">{modalData.locationName}</p>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2">
+                                    <span class="slds-text-title slds-text-color_weak">Product Family</span>
+                                    <p class="product-title">{modalData.productFamily}</p>
+                                </div>
+                            </div>
+
+                            <!-- Inventory Metrics -->
+                            <div class="slds-grid slds-wrap slds-gutters">
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Available</div>
+                                        <div class="metric-value available-value">{modalData.qty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">On Hand</div>
+                                        <div class="metric-value">{modalData.onHandQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Reserved Sale Order</div>
+                                        <div class="metric-value reserved-value">{modalData.reservedSaleOrderQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Reserved Transfer</div>
+                                        <div class="metric-value reserved-value">{modalData.reservedTransferQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Damaged</div>
+                                        <div class="metric-value">{modalData.damagedQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Transit In</div>
+                                        <div class="metric-value transit-value">{modalData.transitInQty}</div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3">
+                                    <div class="metric-card">
+                                        <div class="metric-label">Transit Out</div>
+                                        <div class="metric-value transit-value">{modalData.transitOutQty}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <button class="slds-button slds-button_neutral close-btn" onclick={closeModal}>
+                                Close
+                            </button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>            
+            </template>
+
+            <template if:true={showPagination}>
+                <c-generic-pagination total-records={totalRecords} page-size="3" onpagechange={handlePageChange}>
+                </c-generic-pagination>
+            </template>
+        </div>
+    </template>
+</template>

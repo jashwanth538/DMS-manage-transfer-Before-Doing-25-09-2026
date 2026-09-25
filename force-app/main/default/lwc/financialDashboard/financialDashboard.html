@@ -1,0 +1,851 @@
+<template>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Financial Overview Dashboard (Salesforce DMS)
+         Modern, Full-Width Enterprise Financial SaaS Interface
+    ════════════════════════════════════════════════════════════════════ -->
+    <div class="fd-dashboard">
+
+        <!-- ── Dashboard Header Banner ───────────────────────────────── -->
+        <div class="fd-header">
+            <div class="fd-header__main">
+                <div class="fd-header__icon-box">
+                    <lightning-icon icon-name="standard:opportunity" size="medium"
+                        alternative-text="Financial Dashboard"></lightning-icon>
+                </div>
+                <div class="fd-header__info">
+                    <div class="fd-header__title-row">
+                        <h1 class="fd-header__title">Financial Dashboard</h1>
+                        <template if:true={userAccountName}>
+                            <div class="fd-header__account-pill">
+                                <span class="fd-header__account-dot"></span>
+                                <span class="fd-header__account-name">{userAccountName}</span>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="fd-header__subtitle">Real-time financial activity, payables, receivables & network
+                        valuation across locations.</p>
+                </div>
+            </div>
+            <div class="fd-header__actions">
+                <!-- Top-Right Valuation Toggle Button -->
+                <button class={valuationButtonClass} title="Toggle Financial Valuation Panel"
+                    onclick={handleToggleValuation}>
+                    <lightning-icon icon-name={valuationButtonIcon} size="x-small"
+                        alternative-text="Valuation"></lightning-icon>
+                    <span>{valuationButtonLabel}</span>
+                </button>
+                <button class="fd-btn-refresh" title="Refresh Dashboard" onclick={handleRefresh}>
+                    <lightning-icon icon-name="utility:refresh" size="x-small"
+                        alternative-text="Refresh"></lightning-icon>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── No Account Error ──────────────────────────────────────── -->
+        <template if:true={noAccountError}>
+            <div class="fd-no-account">
+                <div class="fd-no-account__icon">
+                    <lightning-icon icon-name="utility:warning" size="medium" alternative-text="Warning"
+                        variant="warning"></lightning-icon>
+                </div>
+                <h2>No Account Linked</h2>
+                <p>Your logged-in profile is not mapped to any active Account in the Dealer Management System. Please
+                    contact your administrator.</p>
+            </div>
+        </template>
+
+        <!-- ── Loading State (initial) ────────────────────────────────── -->
+        <template if:true={isLoadingContext}>
+            <div class="fd-loading-overlay">
+                <lightning-spinner alternative-text="Loading financial data..." size="large"
+                    variant="brand"></lightning-spinner>
+                <p class="fd-loading-text">Fetching your financial overview…</p>
+            </div>
+        </template>
+
+        <!-- ── Main Dashboard Content ──────────────────────────────── -->
+        <template if:true={hasAccount}>
+
+            <!-- ─ Global Error Banner ─────────────────────────────── -->
+            <template if:true={globalError}>
+                <div class="fd-error-banner">
+                    <lightning-icon icon-name="utility:error" size="small" alternative-text="Error"
+                        variant="error"></lightning-icon>
+                    <span class="fd-error-banner__text">{globalError}</span>
+                    <lightning-button label="Retry" onclick={handleRefresh} variant="brand"
+                        class="fd-retry-btn"></lightning-button>
+                </div>
+            </template>
+
+            <!-- ─ Interactive Valuation Panel (Revealed when Valuation button is clicked) ── -->
+            <template if:true={showValuation}>
+                <div class="fd-valuation-panel">
+                    <div class="fd-valuation-panel__header">
+                        <div class="fd-valuation-panel__title-group">
+                            <div class="fd-valuation-panel__icon-wrap">
+                                <lightning-icon icon-name="utility:chart" size="small"
+                                    alternative-text="Valuation"></lightning-icon>
+                            </div>
+                            <div>
+                                <h2 class="fd-valuation-panel__title">Valuation Details</h2>
+                                <p class="fd-valuation-panel__subtitle">Live financial valuation and outstanding
+                                    balances across your account network</p>
+                            </div>
+                        </div>
+                        <span class="fd-valuation-panel__badge">Interactive Valuation View</span>
+                    </div>
+
+                    <!-- 4 Hero Valuation Cards -->
+                    <div class="fd-hero-grid">
+                        <!-- Tile 1: MY VALUATION -->
+                        <div class="fd-hero-card fd-hero-card--my-val">
+                            <div class="fd-hero-card__header">
+                                <span class="fd-hero-card__label">MY VALUATION</span>
+                                <lightning-helptext
+                                    content="Total gross financial value (receivables + payables) generated exclusively for your logged-in Account."
+                                    class="fd-hero-card__helptext"></lightning-helptext>
+                            </div>
+                            <div class="fd-hero-card__value">
+                                <lightning-formatted-number value={summary.myValuation} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <div class="fd-hero-card__subtitle">Logged-in Account</div>
+                        </div>
+
+                        <!-- Tile 2: MY OUTSTANDING -->
+                        <div class="fd-hero-card fd-hero-card--my-out">
+                            <div class="fd-hero-card__header">
+                                <span class="fd-hero-card__label">MY OUTSTANDING</span>
+                                <lightning-helptext
+                                    content="Total unpaid balance (unpaid payables + uncollected receivables) belonging exclusively to your logged-in Account."
+                                    class="fd-hero-card__helptext"></lightning-helptext>
+                            </div>
+                            <div class="fd-hero-card__value">
+                                <lightning-formatted-number value={summary.myOutstanding} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <div class="fd-hero-card__subtitle">Logged-in Account</div>
+                        </div>
+
+                        <!-- Tile 3: NETWORK VALUATION -->
+                        <div class="fd-hero-card fd-hero-card--net-val">
+                            <div class="fd-hero-card__header">
+                                <span class="fd-hero-card__label">NETWORK VALUATION</span>
+                                <lightning-helptext
+                                    content="Total financial transaction value across all other permitted accounts in your hierarchy, excluding your logged-in Account."
+                                    class="fd-hero-card__helptext"></lightning-helptext>
+                            </div>
+                            <div class="fd-hero-card__value">
+                                <lightning-formatted-number value={summary.networkValuation} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <div class="fd-hero-card__subtitle">Other Permitted Accounts</div>
+                        </div>
+
+                        <!-- Tile 4: NETWORK OUTSTANDING -->
+                        <div class="fd-hero-card fd-hero-card--net-out">
+                            <div class="fd-hero-card__header">
+                                <span class="fd-hero-card__label">NETWORK OUTSTANDING</span>
+                                <lightning-helptext
+                                    content="Total unpaid balance across all other permitted accounts in your hierarchy, excluding your logged-in Account."
+                                    class="fd-hero-card__helptext"></lightning-helptext>
+                            </div>
+                            <div class="fd-hero-card__value">
+                                <lightning-formatted-number value={summary.networkOutstanding} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <div class="fd-hero-card__subtitle">Other Permitted Accounts</div>
+                        </div>
+                    </div>
+
+                    <!-- Extra Financial Metrics Grid -->
+                    <div class="fd-valuation-extra-grid">
+                        <div class="fd-val-mini-card">
+                            <span class="fd-val-mini-card__label">GROSS FINANCIAL AMOUNT</span>
+                            <div class="fd-val-mini-card__value">
+                                <lightning-formatted-number value={grossFinancialAmount} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <span class="fd-val-mini-card__sub">Combined Payables & Receivables</span>
+                        </div>
+                        <div class="fd-val-mini-card">
+                            <span class="fd-val-mini-card__label">SETTLED AMOUNT</span>
+                            <div class="fd-val-mini-card__value fd-text-green">
+                                <lightning-formatted-number value={settledAmount} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <span class="fd-val-mini-card__sub">Total Paid / Collected</span>
+                        </div>
+                        <div class="fd-val-mini-card">
+                            <span class="fd-val-mini-card__label">OUTSTANDING PAYABLES</span>
+                            <div class="fd-val-mini-card__value fd-text-red">
+                                <lightning-formatted-number value={summary.outstandingPayables} format-style="currency"
+                                    currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <span class="fd-val-mini-card__sub">Pending Owed Payments</span>
+                        </div>
+                        <div class="fd-val-mini-card">
+                            <span class="fd-val-mini-card__label">OUTSTANDING RECEIVABLES</span>
+                            <div class="fd-val-mini-card__value fd-text-blue">
+                                <lightning-formatted-number value={summary.outstandingReceivables}
+                                    format-style="currency" currency-code="INR"
+                                    maximum-fraction-digits="0"></lightning-formatted-number>
+                            </div>
+                            <span class="fd-val-mini-card__sub">Pending Incoming Collections</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ─ Secondary KPI Summary Cards (4 Cards) ──────────────── -->
+            <div class="fd-kpi-grid">
+                <!-- Total Payables -->
+                <div class="fd-kpi-card fd-kpi-card--payables">
+                    <div class="fd-kpi-card__header">
+                        <span class="fd-kpi-card__label">TOTAL PAYABLES</span>
+                        <div class="fd-kpi-card__icon-wrap">
+                            <lightning-icon icon-name="utility:upload" size="x-small"
+                                alternative-text="Payables"></lightning-icon>
+                        </div>
+                    </div>
+                    <div class="fd-kpi-card__amount">
+                        <lightning-formatted-number value={summary.totalPayables} format-style="currency"
+                            currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                    </div>
+                    <div class="fd-kpi-card__sub">
+                        <span>Outstanding: </span>
+                        <strong><lightning-formatted-number value={summary.outstandingPayables} format-style="currency"
+                                currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number></strong>
+                    </div>
+                </div>
+
+                <!-- Total Receivables -->
+                <div class="fd-kpi-card fd-kpi-card--receivables">
+                    <div class="fd-kpi-card__header">
+                        <span class="fd-kpi-card__label">TOTAL RECEIVABLES</span>
+                        <div class="fd-kpi-card__icon-wrap">
+                            <lightning-icon icon-name="utility:download" size="x-small"
+                                alternative-text="Receivables"></lightning-icon>
+                        </div>
+                    </div>
+                    <div class="fd-kpi-card__amount">
+                        <lightning-formatted-number value={summary.totalReceivables} format-style="currency"
+                            currency-code="INR" maximum-fraction-digits="0"></lightning-formatted-number>
+                    </div>
+                    <div class="fd-kpi-card__sub">
+                        <span>Outstanding: </span>
+                        <strong><lightning-formatted-number value={summary.outstandingReceivables}
+                                format-style="currency" currency-code="INR"
+                                maximum-fraction-digits="0"></lightning-formatted-number></strong>
+                    </div>
+                </div>
+
+                <!-- Invoices -->
+                <div class="fd-kpi-card fd-kpi-card--invoices">
+                    <div class="fd-kpi-card__header">
+                        <span class="fd-kpi-card__label">TOTAL INVOICES</span>
+                        <div class="fd-kpi-card__icon-wrap">
+                            <lightning-icon icon-name="standard:document" size="x-small"
+                                alternative-text="Invoices"></lightning-icon>
+                        </div>
+                    </div>
+                    <div class="fd-kpi-card__amount fd-kpi-card__amount--count">{summary.totalInvoiceCount}</div>
+                    <div class="fd-kpi-card__sub">Total records</div>
+                </div>
+
+                <!-- Due Soon -->
+                <div class="fd-kpi-card fd-kpi-card--due-soon">
+                    <div class="fd-kpi-card__header">
+                        <span class="fd-kpi-card__label">DUE SOON (7 DAYS)</span>
+                        <div class="fd-kpi-card__icon-wrap">
+                            <lightning-icon icon-name="utility:clock" size="x-small"
+                                alternative-text="Due Soon"></lightning-icon>
+                        </div>
+                    </div>
+                    <div class="fd-kpi-card__amount">
+                        <lightning-formatted-number value={totalDueSoon} format-style="currency" currency-code="INR"
+                            maximum-fraction-digits="0"></lightning-formatted-number>
+                    </div>
+                    <div class="fd-kpi-card__sub">Pay + Receive combined</div>
+                </div>
+            </div>
+
+            <!-- ─ Enterprise View Container ──────────────────────────── -->
+            <div class="fd-main-card">
+                <!-- Card Header with Title, Account Type Toggle, Tabs, and Account Search -->
+                <div class="fd-main-card__header">
+
+                    <!-- Left: Title + Account Type Pills (side-by-side) -->
+                    <div class="fd-main-card__left">
+                        <div class="fd-main-card__title-group">
+                            <div class="fd-main-card__icon-box">
+                                <lightning-icon icon-name="standard:account" size="small"
+                                    alternative-text="Enterprise View"></lightning-icon>
+                            </div>
+                            <div>
+                                <h2 class="fd-main-card__title">Finance View</h2>
+                                <p class="fd-main-card__subtitle">View financial activity and records across your
+                                    organization</p>
+                            </div>
+
+                            <!-- Account Type Pills beside Enterprise View title -->
+                            <div class="fd-account-type-pills">
+                                <button class={acctTypeAllClass} data-type="all" onclick={handleAccountTypeFilter}>
+                                    <lightning-icon icon-name="utility:global" size="xx-small"
+                                        alternative-text="All"></lightning-icon>
+                                    All
+                                </button>
+                                <button class={acctTypeDistributorClass} data-type="Distributor"
+                                    onclick={handleAccountTypeFilter}>
+                                    <lightning-icon icon-name="utility:groups" size="xx-small"
+                                        alternative-text="Distributor"></lightning-icon>
+                                    Distributor
+                                </button>
+                                <button class={acctTypeDealerClass} data-type="Dealer"
+                                    onclick={handleAccountTypeFilter}>
+                                    <lightning-icon icon-name="utility:user" size="xx-small"
+                                        alternative-text="Dealer"></lightning-icon>
+                                    Dealer
+                                </button>
+                                <button class={acctTypeRetailerClass} data-type="Retailer"
+                                    onclick={handleAccountTypeFilter}>
+                                    <lightning-icon icon-name="utility:store" size="xx-small"
+                                        alternative-text="Retailer"></lightning-icon>
+                                    Retailer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Inline Account Search (left) + Section Tabs (right) -->
+                    <div class="fd-main-card__right">
+                        <!-- Compact Account Search (placed to the left of tabs) -->
+                        <div class="fd-account-search-bar">
+                            <div class="fd-account-search-bar__icon">
+                                <lightning-icon icon-name="utility:search" size="x-small"
+                                    alternative-text="Search"></lightning-icon>
+                            </div>
+                            <input type="text" class="fd-account-search-input" placeholder="Search by account…"
+                                value={accountSearch} oninput={handleAccountSearch} />
+                            <template if:true={accountSearch}>
+                                <button class="fd-account-search-clear" onclick={handleClearAccountSearch}
+                                    title="Clear search">
+                                    <lightning-icon icon-name="utility:clear" size="xx-small"
+                                        alternative-text="Clear"></lightning-icon>
+                                </button>
+                            </template>
+                            <template if:true={accountTypeFilterLabel}>
+                                <span class="fd-account-search-active-badge">
+                                    <lightning-icon icon-name="utility:filterList" size="xx-small"
+                                        alternative-text="Active filter"></lightning-icon>
+                                    {accountTypeFilterLabel}
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- Section Tabs Navigation -->
+                        <div class="fd-tabs-pills">
+                            <button class={payablesTabClass} data-tab="payables" onclick={handleTabChange}>
+                                <span>Payables</span>
+                                <template if:true={payablesCount}>
+                                    <span class="fd-tab-pill__count">{payablesCount}</span>
+                                </template>
+                            </button>
+                            <button class={receivablesTabClass} data-tab="receivables" onclick={handleTabChange}>
+                                <span>Receivables</span>
+                                <template if:true={receivablesCount}>
+                                    <span class="fd-tab-pill__count">{receivablesCount}</span>
+                                </template>
+                            </button>
+                            <button class={invoicesTabClass} data-tab="invoices" onclick={handleTabChange}>
+                                <span>Invoices</span>
+                                <template if:true={invoicesCount}>
+                                    <span class="fd-tab-pill__count">{invoicesCount}</span>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════
+                     PAYABLES TAB CONTENT
+                ══════════════════════════════════════════════════════ -->
+                <template if:true={isPayablesTab}>
+                    <div class="fd-tab-pane">
+                        <!-- Toolbar -->
+                        <div class="fd-toolbar">
+                            <div class="fd-toolbar__search">
+                                <lightning-input type="search"
+                                    placeholder="Search payables by record #, account, or invoice ref..."
+                                    value={payableSearch} onchange={handlePayableSearch} label="Search Payables"
+                                    variant="label-hidden" class="fd-search-field"></lightning-input>
+                            </div>
+                            <div class="fd-toolbar__filters">
+                                <template for:each={statusFilters} for:item="f">
+                                    <button key={f.value} class={f.cssClass} data-filter={f.value}
+                                        data-section="payable" onclick={handleStatusFilter}>{f.label}</button>
+                                </template>
+                            </div>
+                            <div class="fd-toolbar__sort">
+                                <lightning-combobox label="Sort by" value={payableSort} options={sortOptions}
+                                    onchange={handlePayableSort} variant="label-hidden"
+                                    class="fd-sort-combobox"></lightning-combobox>
+                            </div>
+                        </div>
+
+                        <!-- Error -->
+                        <template if:true={payablesError}>
+                            <div class="fd-section-error">
+                                <lightning-icon icon-name="utility:error" size="small" variant="error"
+                                    alternative-text="Error"></lightning-icon>
+                                <span>Unable to load payables. Please try again.</span>
+                                <lightning-button label="Retry" onclick={handleRefresh} variant="brand-outline"
+                                    size="small"></lightning-button>
+                            </div>
+                        </template>
+
+                        <!-- Loading -->
+                        <template if:true={isLoadingPayables}>
+                            <div class="fd-section-spinner">
+                                <lightning-spinner alternative-text="Loading payables…" size="medium"
+                                    variant="brand"></lightning-spinner>
+                            </div>
+                        </template>
+
+                        <!-- Empty State -->
+                        <template if:true={showPayablesEmpty}>
+                            <div class="fd-empty-state">
+                                <div class="fd-empty-state__icon-wrap">
+                                    <lightning-icon icon-name="utility:open_folder" size="medium"
+                                        alternative-text="No data"></lightning-icon>
+                                </div>
+                                <h3 class="fd-empty-state__title">No Payables Found</h3>
+                                <p class="fd-empty-state__msg">There are no payable records matching your search query
+                                    or selected status filter.</p>
+                            </div>
+                        </template>
+
+                        <!-- Table -->
+                        <template if:true={showPayablesTable}>
+                            <div class="fd-table-card">
+                                <div class="fd-table-wrapper">
+                                    <table class="fd-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYABLE #</th>
+                                                <th>SUPPLYING ACCOUNT</th>
+                                                <th>INVOICE REF</th>
+                                                <th>DATE</th>
+                                                <th>DUE DATE</th>
+                                                <th class="fd-col-right">AMOUNT</th>
+                                                <th class="fd-col-right">PAID</th>
+                                                <th class="fd-col-right">OUTSTANDING</th>
+                                                <th>STATUS</th>
+                                                <th>DUE STATUS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={filteredPayables} for:item="row">
+                                                <tr key={row.recordId} class={row.rowClass}
+                                                    data-record-id={row.recordId} data-object="Payable__c"
+                                                    onclick={handleRowClick}>
+                                                    <td class="fd-cell-primary">
+                                                        <button class="fd-link-btn" data-record-id={row.recordId}
+                                                            data-object="Payable__c"
+                                                            onclick={handleNavClick}>{row.payableNumber}</button>
+                                                    </td>
+                                                    <td class="fd-cell-account">{row.supplyingAccountName}</td>
+                                                    <td>
+                                                        <template if:true={row.invoiceNumber}>
+                                                            <button class="fd-link-btn fd-link-btn--secondary"
+                                                                data-record-id={row.invoiceId} data-object="Invoice__c"
+                                                                onclick={handleNavClick}>{row.invoiceNumber}</button>
+                                                        </template>
+                                                        <template if:false={row.invoiceNumber}>
+                                                            <span class="fd-text-muted">—</span>
+                                                        </template>
+                                                    </td>
+                                                    <td class="fd-text-muted">
+                                                        <template if:true={row.payableDate}>
+                                                            <lightning-formatted-date-time value={row.payableDateISO}
+                                                                year="numeric" month="short"
+                                                                day="numeric"></lightning-formatted-date-time>
+                                                        </template>
+                                                        <template if:false={row.payableDate}>—</template>
+                                                    </td>
+                                                    <td>
+                                                        <template if:true={row.dueDate}>
+                                                            <lightning-formatted-date-time value={row.dueDateISO}
+                                                                year="numeric" month="short"
+                                                                day="numeric"></lightning-formatted-date-time>
+                                                        </template>
+                                                        <template if:false={row.dueDate}>
+                                                            <span class="fd-text-muted">—</span>
+                                                        </template>
+                                                    </td>
+                                                    <td class="fd-col-right">
+                                                        <lightning-formatted-number value={row.totalAmount}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td class="fd-col-right fd-text-muted">
+                                                        <lightning-formatted-number value={row.amountPaid}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td class="fd-col-right fd-col-outstanding">
+                                                        <lightning-formatted-number value={row.outstandingBalance}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td>
+                                                        <span class={row.statusBadgeClass}>{row.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class={row.dueBadgeClass}>{row.dueLabel}</span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <template if:true={showPayablesPagination}>
+                                    <div class="fd-pagination">
+                                        <span class="fd-pagination__info">Showing {payablesPaginationLabel}</span>
+                                        <div class="fd-pagination__actions">
+                                            <lightning-button label="Previous" onclick={handlePayablesPrev}
+                                                disabled={isPrevDisabled} icon-name="utility:chevronleft"
+                                                icon-position="left" variant="border"></lightning-button>
+                                            <lightning-button label="Next" onclick={handlePayablesNext}
+                                                disabled={isPayablesNextDisabled} icon-name="utility:chevronright"
+                                                icon-position="right" variant="border"></lightning-button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- ══════════════════════════════════════════════════════
+                     RECEIVABLES TAB CONTENT
+                ══════════════════════════════════════════════════════ -->
+                <template if:true={isReceivablesTab}>
+                    <div class="fd-tab-pane">
+                        <!-- Toolbar -->
+                        <div class="fd-toolbar">
+                            <div class="fd-toolbar__search">
+                                <lightning-input type="search"
+                                    placeholder="Search receivables by record #, customer, or invoice ref..."
+                                    value={receivableSearch} onchange={handleReceivableSearch}
+                                    label="Search Receivables" variant="label-hidden"
+                                    class="fd-search-field"></lightning-input>
+                            </div>
+                            <div class="fd-toolbar__filters">
+                                <template for:each={statusFilters} for:item="f">
+                                    <button key={f.value} class={f.cssClassRec} data-filter={f.value}
+                                        data-section="receivable" onclick={handleStatusFilter}>{f.label}</button>
+                                </template>
+                            </div>
+                            <div class="fd-toolbar__sort">
+                                <lightning-combobox label="Sort by" value={receivableSort} options={sortOptions}
+                                    onchange={handleReceivableSort} variant="label-hidden"
+                                    class="fd-sort-combobox"></lightning-combobox>
+                            </div>
+                        </div>
+
+                        <!-- Error -->
+                        <template if:true={receivablesError}>
+                            <div class="fd-section-error">
+                                <lightning-icon icon-name="utility:error" size="small" variant="error"
+                                    alternative-text="Error"></lightning-icon>
+                                <span>Unable to load receivables. Please try again.</span>
+                                <lightning-button label="Retry" onclick={handleRefresh} variant="brand-outline"
+                                    size="small"></lightning-button>
+                            </div>
+                        </template>
+
+                        <!-- Loading -->
+                        <template if:true={isLoadingReceivables}>
+                            <div class="fd-section-spinner">
+                                <lightning-spinner alternative-text="Loading receivables…" size="medium"
+                                    variant="brand"></lightning-spinner>
+                            </div>
+                        </template>
+
+                        <!-- Empty State -->
+                        <template if:true={showReceivablesEmpty}>
+                            <div class="fd-empty-state">
+                                <div class="fd-empty-state__icon-wrap">
+                                    <lightning-icon icon-name="utility:open_folder" size="medium"
+                                        alternative-text="No data"></lightning-icon>
+                                </div>
+                                <h3 class="fd-empty-state__title">No Receivables Found</h3>
+                                <p class="fd-empty-state__msg">There are no receivable records matching your search
+                                    query or selected status filter.</p>
+                            </div>
+                        </template>
+
+                        <!-- Table -->
+                        <template if:true={showReceivablesTable}>
+                            <div class="fd-table-card">
+                                <div class="fd-table-wrapper">
+                                    <table class="fd-table">
+                                        <thead>
+                                            <tr>
+                                                <th>RECEIVABLE #</th>
+                                                <th>CUSTOMER / BUYER</th>
+                                                <th>INVOICE REF</th>
+                                                <th>DATE</th>
+                                                <th>DUE DATE</th>
+                                                <th class="fd-col-right">AMOUNT</th>
+                                                <th class="fd-col-right">RECEIVED</th>
+                                                <th class="fd-col-right">OUTSTANDING</th>
+                                                <th>STATUS</th>
+                                                <th>DUE STATUS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={filteredReceivables} for:item="row">
+                                                <tr key={row.recordId} class={row.rowClass}
+                                                    data-record-id={row.recordId} data-object="Receivable__c"
+                                                    onclick={handleRowClick}>
+                                                    <td class="fd-cell-primary">
+                                                        <button class="fd-link-btn" data-record-id={row.recordId}
+                                                            data-object="Receivable__c"
+                                                            onclick={handleNavClick}>{row.receivableNumber}</button>
+                                                    </td>
+                                                    <td class="fd-cell-account">{row.requestingAccountName}</td>
+                                                    <td>
+                                                        <template if:true={row.invoiceNumber}>
+                                                            <button class="fd-link-btn fd-link-btn--secondary"
+                                                                data-record-id={row.invoiceId} data-object="Invoice__c"
+                                                                onclick={handleNavClick}>{row.invoiceNumber}</button>
+                                                        </template>
+                                                        <template if:false={row.invoiceNumber}>
+                                                            <span class="fd-text-muted">—</span>
+                                                        </template>
+                                                    </td>
+                                                    <td class="fd-text-muted">
+                                                        <template if:true={row.receivableDate}>
+                                                            <lightning-formatted-date-time value={row.receivableDateISO}
+                                                                year="numeric" month="short"
+                                                                day="numeric"></lightning-formatted-date-time>
+                                                        </template>
+                                                        <template if:false={row.receivableDate}>—</template>
+                                                    </td>
+                                                    <td>
+                                                        <template if:true={row.dueDate}>
+                                                            <lightning-formatted-date-time value={row.dueDateISO}
+                                                                year="numeric" month="short"
+                                                                day="numeric"></lightning-formatted-date-time>
+                                                        </template>
+                                                        <template if:false={row.dueDate}>
+                                                            <span class="fd-text-muted">—</span>
+                                                        </template>
+                                                    </td>
+                                                    <td class="fd-col-right">
+                                                        <lightning-formatted-number value={row.totalAmount}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td class="fd-col-right fd-text-muted">
+                                                        <lightning-formatted-number value={row.amountReceived}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td class="fd-col-right fd-col-outstanding">
+                                                        <lightning-formatted-number value={row.outstandingBalance}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td>
+                                                        <span class={row.statusBadgeClass}>{row.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class={row.dueBadgeClass}>{row.dueLabel}</span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <template if:true={showReceivablesPagination}>
+                                    <div class="fd-pagination">
+                                        <span class="fd-pagination__info">Showing {receivablesPaginationLabel}</span>
+                                        <div class="fd-pagination__actions">
+                                            <lightning-button label="Previous" onclick={handleReceivablesPrev}
+                                                disabled={isRecPrevDisabled} icon-name="utility:chevronleft"
+                                                icon-position="left" variant="border"></lightning-button>
+                                            <lightning-button label="Next" onclick={handleReceivablesNext}
+                                                disabled={isRecNextDisabled} icon-name="utility:chevronright"
+                                                icon-position="right" variant="border"></lightning-button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- ══════════════════════════════════════════════════════
+                     INVOICES TAB CONTENT
+                ══════════════════════════════════════════════════════ -->
+                <template if:true={isInvoicesTab}>
+                    <div class="fd-tab-pane">
+                        <!-- Toolbar -->
+                        <div class="fd-toolbar">
+                            <div class="fd-toolbar__search">
+                                <lightning-input type="search" placeholder="Search invoices by number or account..."
+                                    value={invoiceSearch} onchange={handleInvoiceSearch} label="Search Invoices"
+                                    variant="label-hidden" class="fd-search-field"></lightning-input>
+                            </div>
+                            <div class="fd-toolbar__filters">
+                                <template for:each={invoiceStatusFilters} for:item="f">
+                                    <button key={f.value} class={f.cssClassInv} data-filter={f.value}
+                                        data-section="invoice" onclick={handleStatusFilter}>{f.label}</button>
+                                </template>
+                            </div>
+                            <div class="fd-toolbar__sort">
+                                <lightning-combobox label="Sort by" value={invoiceSort} options={sortOptions}
+                                    onchange={handleInvoiceSort} variant="label-hidden"
+                                    class="fd-sort-combobox"></lightning-combobox>
+                            </div>
+                        </div>
+
+                        <!-- Error -->
+                        <template if:true={invoicesError}>
+                            <div class="fd-section-error">
+                                <lightning-icon icon-name="utility:error" size="small" variant="error"
+                                    alternative-text="Error"></lightning-icon>
+                                <span>Unable to load invoices. Please try again.</span>
+                                <lightning-button label="Retry" onclick={handleRefresh} variant="brand-outline"
+                                    size="small"></lightning-button>
+                            </div>
+                        </template>
+
+                        <!-- Loading -->
+                        <template if:true={isLoadingInvoices}>
+                            <div class="fd-section-spinner">
+                                <lightning-spinner alternative-text="Loading invoices…" size="medium"
+                                    variant="brand"></lightning-spinner>
+                            </div>
+                        </template>
+
+                        <!-- Empty State -->
+                        <template if:true={showInvoicesEmpty}>
+                            <div class="fd-empty-state">
+                                <div class="fd-empty-state__icon-wrap">
+                                    <lightning-icon icon-name="utility:open_folder" size="medium"
+                                        alternative-text="No data"></lightning-icon>
+                                </div>
+                                <h3 class="fd-empty-state__title">No Invoices Found</h3>
+                                <p class="fd-empty-state__msg">There are no invoice records matching your search query
+                                    or selected status filter.</p>
+                            </div>
+                        </template>
+
+                        <!-- Table -->
+                        <template if:true={showInvoicesTable}>
+                            <div class="fd-table-card">
+                                <div class="fd-table-wrapper">
+                                    <table class="fd-table">
+                                        <thead>
+                                            <tr>
+                                                <th>INVOICE #</th>
+                                                <th>REQUESTING ACCOUNT</th>
+                                                <th>SUPPLYING ACCOUNT</th>
+                                                <th>INVOICE DATE</th>
+                                                <th>DUE DATE</th>
+                                                <th class="fd-col-right">TOTAL AMOUNT</th>
+                                                <th class="fd-col-right">PAID</th>
+                                                <th class="fd-col-right">BALANCE DUE</th>
+                                                <th>STATUS</th>
+                                                <th>DUE STATUS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={filteredInvoices} for:item="row">
+                                                <tr key={row.recordId} class={row.rowClass}
+                                                    data-record-id={row.recordId} data-object="Invoice__c"
+                                                    onclick={handleRowClick}>
+                                                    <td class="fd-cell-primary">
+                                                        <button class="fd-link-btn" data-record-id={row.recordId}
+                                                            data-object="Invoice__c"
+                                                            onclick={handleNavClick}>{row.invoiceNumber}</button>
+                                                    </td>
+                                                    <td class="fd-cell-account">{row.requestingAccountName}</td>
+                                                    <td class="fd-cell-account">{row.supplyingAccountName}</td>
+                                                    <td class="fd-text-muted">
+                                                        <template if:true={row.invoiceDate}>
+                                                            <lightning-formatted-date-time value={row.invoiceDateISO}
+                                                                year="numeric" month="short"
+                                                                day="numeric"></lightning-formatted-date-time>
+                                                        </template>
+                                                        <template if:false={row.invoiceDate}>—</template>
+                                                    </td>
+                                                    <td>
+                                                        <template if:true={row.dueDate}>
+                                                            <lightning-formatted-date-time value={row.dueDateISO}
+                                                                year="numeric" month="short"
+                                                                day="numeric"></lightning-formatted-date-time>
+                                                        </template>
+                                                        <template if:false={row.dueDate}>
+                                                            <span class="fd-text-muted">—</span>
+                                                        </template>
+                                                    </td>
+                                                    <td class="fd-col-right">
+                                                        <lightning-formatted-number value={row.totalAmount}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td class="fd-col-right fd-text-muted">
+                                                        <lightning-formatted-number value={row.amountPaid}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td class="fd-col-right fd-col-outstanding">
+                                                        <lightning-formatted-number value={row.balanceDue}
+                                                            format-style="currency" currency-code="INR"
+                                                            maximum-fraction-digits="2"></lightning-formatted-number>
+                                                    </td>
+                                                    <td>
+                                                        <span class={row.statusBadgeClass}>{row.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class={row.dueBadgeClass}>{row.dueLabel}</span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <template if:true={showInvoicesPagination}>
+                                    <div class="fd-pagination">
+                                        <span class="fd-pagination__info">Showing {invoicesPaginationLabel}</span>
+                                        <div class="fd-pagination__actions">
+                                            <lightning-button label="Previous" onclick={handleInvoicesPrev}
+                                                disabled={isInvPrevDisabled} icon-name="utility:chevronleft"
+                                                icon-position="left" variant="border"></lightning-button>
+                                            <lightning-button label="Next" onclick={handleInvoicesNext}
+                                                disabled={isInvNextDisabled} icon-name="utility:chevronright"
+                                                icon-position="right" variant="border"></lightning-button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+            </div>
+            <!-- end fd-main-card -->
+
+        </template>
+        <!-- end hasAccount -->
+
+    </div>
+    <!-- end fd-dashboard -->
+</template>

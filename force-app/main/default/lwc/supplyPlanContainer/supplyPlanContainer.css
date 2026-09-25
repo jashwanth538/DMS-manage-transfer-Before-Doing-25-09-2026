@@ -1,0 +1,115 @@
+:host {
+    display: block;
+    background-color: #f8fafc;
+    padding: 0.85rem;
+    min-height: 100vh;
+}
+
+.supply-plan-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    grid-template-areas:
+        "header header"
+        "dashboard dashboard"
+        "unified-row unified-row"
+        "details details"
+        "unified-bottom unified-bottom";
+    gap: 0.85rem;
+    align-items: stretch;
+    padding: 0;
+}
+
+@media (max-width: 1440px) {
+    .supply-plan-dashboard {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "header"
+            "dashboard"
+            "unified-row"
+            "details"
+            "unified-bottom";
+    }
+}
+
+@media (max-width: 768px) {
+    .supply-plan-dashboard {
+        gap: 0.75rem;
+    }
+}
+
+.unified-row-card {
+    grid-area: unified-row;
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    gap: 0.85rem;
+}
+
+.unified-bottom-row {
+    grid-area: unified-bottom;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 0.85rem;
+}
+
+@media (max-width: 1440px) {
+    .unified-bottom-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1440px) {
+    .unified-row-card {
+        grid-template-columns: 1fr;
+    }
+}
+
+c-supply-plan-search {
+    display: contents;
+}
+
+c-order-allocation-line-items-component {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+c-supply-order-planner {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+c-supplyplansummary {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1px solid #cbd5e1;
+}
+
+@media (max-width: 1440px) {
+    c-supplyplansummary {
+        border-right: none;
+        border-bottom: 1px solid #cbd5e1;
+    }
+}
+
+c-order-allocation-plan-break-down {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+c-order-allocation-plan-details-component {
+    grid-area: details;
+    display: block;
+    min-width: 0;
+}

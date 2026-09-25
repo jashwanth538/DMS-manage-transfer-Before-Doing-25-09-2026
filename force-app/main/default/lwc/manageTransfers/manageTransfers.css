@@ -1,0 +1,431 @@
+/* ============================================================
+   Manage Transfers – Premium UI
+   ============================================================ */
+
+:host {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 60%, #eef2ff 100%);
+    padding: 1.25rem;
+    box-sizing: border-box;
+    font-family: 'Inter', 'Salesforce Sans', sans-serif;
+}
+
+/* ── Outer wrapper ─────────────────────────────────────────── */
+.dashboard-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex: 1;
+}
+
+/* ── Hero Filter Banner (Redesigned Custom Card) ────────────── */
+.filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 0.75rem 1.25rem 0.75rem 1.75rem;
+    box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.08), 0 2px 8px -1px rgba(148, 163, 184, 0.04);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: visible;
+}
+
+.filter-card-content {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 1.5rem;
+}
+
+.header-text-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+.accent-line {
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 5px;
+    background: #4f46e5;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+    z-index: 2;
+}
+
+.title-and-badges {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.card-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.badge-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.badge-pending {
+    background-color: #eef2ff;
+    color: #4f46e5;
+}
+
+.badge-transit {
+    background-color: #fff7ed;
+    color: #c2410c;
+}
+
+.card-subtitle {
+    font-size: 0.825rem;
+    color: #64748b;
+    margin: 0.25rem 0 0 0;
+    font-weight: 400;
+    line-height: 1.4;
+}
+
+.card-controls-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+}
+
+.search-wrapper {
+    flex: 0 1 320px;
+    min-width: 180px;
+}
+
+.search-input {
+    width: 100%;
+    height: 36px;
+    padding: 0 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: #1e293b;
+    background-color: #ffffff;
+    transition: all 0.2s ease-in-out;
+}
+
+.search-input::placeholder {
+    color: #94a3b8;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.combobox-wrapper {
+    width: 180px;
+}
+
+.location-combobox,
+.request-type-combobox {
+    --slds-c-input-color-border: #cbd5e1;
+    --slds-c-input-radius-border: 10px;
+    --slds-c-input-color-border-focus: #6366f1;
+    --slds-c-input-shadow-focus: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.clear-filters-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.clear-filters-btn:hover {
+    color: #0f172a;
+    background-color: #f1f5f9;
+}
+
+.clear-filters-btn:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+    background-color: transparent;
+    pointer-events: none;
+}
+
+.clear-icon {
+    font-size: 0.8rem;
+}
+
+/* ============================================================
+   Metrics Dashboard Bar
+   ============================================================ */
+.metrics-bar {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    width: 100%;
+    overflow-x: auto;
+    padding: 0.15rem 0;
+    flex-wrap: nowrap;
+}
+
+.metric-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1.15rem;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    position: relative;
+    overflow: hidden;
+    flex: 1 1 25%;
+    min-width: 190px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    border-color: #cbd5e1;
+}
+
+.metric-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    z-index: 1;
+}
+
+/* Specific metric card accents matching screenshot */
+.metric-pending .metric-accent {
+    background: #d97706; /* Amber / Orange */
+}
+
+.metric-pending .metric-label {
+    color: #b45309;
+}
+
+.metric-transit .metric-accent {
+    background: #2563eb; /* Blue */
+}
+
+.metric-transit .metric-label {
+    color: #2563eb;
+}
+
+.metric-completed .metric-accent {
+    background: #10b981; /* Green */
+}
+
+.metric-completed .metric-label {
+    color: #059669;
+}
+
+.metric-total-qty .metric-accent {
+    background: #2563eb; /* Blue */
+}
+
+.metric-total-qty .metric-label {
+    color: #2563eb;
+}
+
+.metric-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding-left: 0.35rem;
+}
+
+.metric-label {
+    font-size: 0.675rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+    margin-bottom: 0.2rem;
+    letter-spacing: -0.03em;
+}
+
+.metric-subtext {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* ── Grid container ─────────────────────────────────────────── */
+.grid-container {
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.full-height {
+    flex-grow: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* ── Responsive: ≥ 768px ────────────────────────────────────── */
+@media (min-width: 768px) {
+    :host {
+        height: calc(100vh - 110px);
+        min-height: 600px;
+        overflow: hidden;
+    }
+
+    .dashboard-wrapper {
+        flex-grow: 1;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .grid-container {
+        flex-grow: 1;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .flex-col {
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+}
+
+/* ── Responsive: ≤ 1150px ────────────────────────────────────── */
+@media (max-width: 1150px) {
+    .filter-card-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .card-controls-row {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .search-wrapper {
+        flex: 1 1 260px;
+    }
+
+    .combobox-wrapper {
+        flex: 1 1 180px;
+        width: auto;
+    }
+}
+
+/* ── Responsive: ≤ 768px ────────────────────────────────────── */
+@media (max-width: 768px) {
+    :host {
+        padding: 0.75rem;
+        min-height: auto;
+        height: auto;
+    }
+
+    .filter-card {
+        padding: 1.25rem 1rem 1.25rem 1.5rem;
+        border-radius: 12px;
+    }
+
+    .card-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .combobox-wrapper {
+        width: 100%;
+    }
+
+    .metrics-bar {
+        gap: 0.75rem;
+    }
+
+    .metric-card {
+        padding: 0.75rem 1rem;
+        min-width: 150px;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
+}

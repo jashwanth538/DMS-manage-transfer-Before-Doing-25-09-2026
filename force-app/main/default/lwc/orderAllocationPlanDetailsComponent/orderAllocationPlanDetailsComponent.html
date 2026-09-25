@@ -1,0 +1,134 @@
+<template>
+    <div class="summary-wrapper">
+        <!-- Spinner -->
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </template>
+
+        <div class="summary-container">
+            <!-- Search Bar Block -->
+            <template if:false={recordId}>
+                <div class="slds-grid slds-gutters slds-m-bottom_medium slds-align-items-end">
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-input type="search" label="Supply Plan Number" value={searchTerm}
+                            onchange={handleSearchChange}></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-button label="Search" variant="brand" onclick={handleSearchClick}></lightning-button>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Bottom: Sales Allocation Details Table - only shown after Confirm Plan -->
+            <template if:true={isConfirmed}>
+                <template if:true={planDetails.length}>
+                    <div class="card-box" style="padding: 20px;">
+                        <div class="card-header slds-p-horizontal_medium slds-p-vertical_small"
+                            style="border-bottom: 1px solid #cbd5e1; margin: -20px -20px 20px -20px;">
+                            <h2 class="section-title" style="font-size: 1.05rem; font-weight: 700; color: #4b5563;">
+                                Sales Allocation Details</h2>
+                        </div>
+                        <div class="slds-scrollable_x" style="border: 1px solid #cbd5e1; border-radius: 8px;">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 4%;">#</th>
+                                        <th style="width: 12%;" class="sortable-header" onclick={handleSort} data-field="sourceType">
+                                            <span class="header-label">Source Type</span>
+                                            <template if:true={isSourceTypeSorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th>
+                                        <th style="width: 13%;" class="sortable-header" onclick={handleSort} data-field="sourceNumber">
+                                            <span class="header-label">Source Number</span>
+                                            <template if:true={isSourceNumberSorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th>
+                                        <th style="width: 11%;" class="sortable-header" onclick={handleSort} data-field="status">
+                                            <span class="header-label">Status</span>
+                                            <template if:true={isStatusSorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th>
+                                        <th style="width: 25%;" class="sortable-header" onclick={handleSort} data-field="productName">
+                                            <span class="header-label">Product</span>
+                                            <template if:true={isProductSorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th>
+                                        <!-- <th style="width: 14%;" class="sortable-header" onclick={handleSort} data-field="supplyMethod">
+                                            <span class="header-label">Supply Method</span>
+                                            <template if:true={isSupplyMethodSorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th> -->
+                                        <th style="width: 15%;" class="sortable-header" onclick={handleSort} data-field="lineItemName">
+                                            <span class="header-label">Line Item</span>
+                                            <template if:true={isLineItemSorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th>
+                                        <th style="text-align: right; width: 6%;" class="sortable-header" onclick={handleSort} data-field="qty">
+                                            <span class="header-label">Qty</span>
+                                            <template if:true={isQtySorted}>
+                                                <lightning-icon icon-name={sortIcon} size="x-small" class="sort-icon"></lightning-icon>
+                                            </template>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={pagedPlanDetails} for:item="detail">
+                                        <tr key={detail.uniqueKey}>
+                                            <td>{detail.index}</td>
+                                            <td>
+                                                <span class={detail.badgeClass}>{detail.sourceType}</span>
+                                            </td>
+                                            <td title={detail.reason}>
+                                                <template if:true={detail.sourceUrl}>
+                                                    <a href={detail.sourceUrl} target="_blank" rel="noopener noreferrer"
+                                                        class="link-styled">{detail.sourceNumber}</a>
+                                                </template>
+                                                <template if:false={detail.sourceUrl}>
+                                                    <span style={detail.isNotGeneratedStyle}>{detail.sourceNumber}</span>
+                                                    <template if:true={detail.isNotGenerated}>
+                                                        <lightning-icon icon-name="utility:info" size="xx-small" class="slds-m-left_xx-small" title={detail.reason}></lightning-icon>
+                                                    </template>
+                                                </template>
+                                            </td>
+                                            <td title={detail.reason}>
+                                                <span class={detail.statusBadgeClass}>{detail.status}</span>
+                                            </td>
+                                            <td style="font-weight: 600; color: #1e293b;">{detail.productName}</td>
+                                            <!-- <td>{detail.supplyMethod}</td> -->
+                                            <td><a href={detail.lineItemUrl} target="_blank" rel="noopener noreferrer"
+                                                    class="link-styled">{detail.lineItemName}</a></td>
+                                            <td
+                                                style="text-align: right; font-weight: 700; color: #334155; font-size: 0.95rem;">
+                                                {detail.qty}</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination Panel -->
+                        <template if:true={totalRecords}>
+                            <div class="slds-m-top_medium">
+                                <c-generic-pagination current-page={currentPage} page-size={pageSize}
+                                    total-records={totalRecords} show-page-size-selector="true" onpagechange={handlePageChange}>
+                                </c-generic-pagination>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </template>
+
+            <template if:true={error}>
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <h2>{error}</h2>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

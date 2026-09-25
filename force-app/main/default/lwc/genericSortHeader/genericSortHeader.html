@@ -1,0 +1,19 @@
+<template>
+    <div class={headerClass} onclick={handleSortClick} title="Click to sort column">
+        <span class="sort-label">{label}</span>
+        <template if:true={isSorted}>
+            <lightning-icon 
+                icon-name={sortIconName} 
+                size="x-small" 
+                class="sort-icon slds-m-left_xx-small">
+            </lightning-icon>
+        </template>
+        <template if:false={isSorted}>
+            <lightning-icon 
+                icon-name="utility:sort" 
+                size="x-small" 
+                class="sort-icon sort-icon-inactive slds-m-left_xx-small">
+            </lightning-icon>
+        </template>
+    </div>
+</template>

@@ -1,0 +1,73 @@
+<template>
+    <div class="summary-wrapper">
+        <!-- Spinner -->
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </template>
+        
+        <div class="summary-container">
+            <!-- Search Bar Block -->
+            <template if:false={recordId}>
+                <div class="slds-grid slds-gutters slds-m-bottom_medium slds-align-items-end">
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-input type="search" label="Supply Plan Number" value={searchTerm} onchange={handleSearchChange}></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-button label="Search" variant="brand" onclick={handleSearchClick}></lightning-button>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={summaryData}>
+                <!-- Supply Plan Breakdown Cards -->
+                <div class="card-box breakdown-container">
+                    <h3 class="slds-text-heading_small slds-m-bottom_medium">Order Allocation Breakdown</h3>
+                    
+                    <div class="slds-grid slds-wrap slds-gutters_small">
+                        <!-- Reserved Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-2 slds-m-bottom_small">
+                            <div class="stat-card card-reserved">
+                                <div class="stat-title">Reserved (Current Location)</div>
+                                <div class="stat-value">{reservedQtyFormatted}</div>
+                                <div class="stat-subtitle">{summaryData.reservedPercent}% of Total</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Transfer Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-2 slds-m-bottom_small">
+                            <div class="stat-card card-transfer">
+                                <div class="stat-title">Transfer (Other Locations)</div>
+                                <div class="stat-value">{transferQtyFormatted}</div>
+                                <div class="stat-subtitle">{summaryData.transferPercent}% of Total</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Procurement Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-2 slds-m-bottom_small">
+                            <div class="stat-card card-procurement">
+                                <div class="stat-title">Procurement</div>
+                                <div class="stat-value">{procurementQtyFormatted}</div>
+                                <div class="stat-subtitle">{summaryData.procurementPercent}% of Total</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Total Covered Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-2 slds-m-bottom_small">
+                            <div class="stat-card card-total">
+                                <div class="stat-title">Total Covered</div>
+                                <div class="stat-value">{totalCoveredFormatted}</div>
+                                <div class="stat-subtitle">Coverage: {summaryData.totalCoveredPercent}%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <template if:true={error}>
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <h2>{error}</h2>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

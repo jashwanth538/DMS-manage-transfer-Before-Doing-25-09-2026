@@ -1,0 +1,62 @@
+<template>
+    <div class="search-filter-panel slds-p-around_medium card-gradient-bg">
+        <template if:true={panelTitle}>
+            <div class="panel-header slds-m-bottom_small">
+                <h2 class="panel-title">{panelTitle}</h2>
+            </div>
+        </template>
+        
+        <div class="slds-grid slds-wrap slds-gutters slds-grid_vertical-align-end">
+            <!-- Search Key Input Field -->
+            <div class={searchFieldClass}>
+                <lightning-input 
+                    name="searchInput" 
+                    label={searchLabel} 
+                    type="search" 
+                    placeholder={searchPlaceholder} 
+                    value={searchText}
+                    onchange={handleSearchChange}
+                    class="search-input-field">
+                </lightning-input>
+            </div>
+
+            <!-- Search Column selector (Optional) -->
+            <template if:true={hasSearchColumns}>
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-m-bottom_small">
+                    <lightning-combobox 
+                        name="searchColumnSelector" 
+                        label={searchColumnLabel} 
+                        placeholder={searchColumnPlaceholder}
+                        value={selectedSearchColumn} 
+                        options={searchColumns} 
+                        onchange={handleSearchColumnChange}
+                        class="search-column-combobox">
+                    </lightning-combobox>
+                </div>
+            </template>
+
+            <!-- Filter Dropdown (Optional) -->
+            <template if:true={hasFilterOptions}>
+                <div class={filterFieldClass}>
+                    <lightning-combobox 
+                        name="filterSelector" 
+                        label={filterLabel} 
+                        placeholder={filterPlaceholder} 
+                        value={selectedFilterValue} 
+                        options={filterOptions} 
+                        onchange={handleFilterChange}
+                        class="filter-combobox">
+                    </lightning-combobox>
+                </div>
+            </template>
+
+            <!-- Reset / Action buttons -->
+            <div class={resetFieldClass}>
+                <button class="slds-button slds-button_neutral reset-btn-custom slds-w-100" onclick={handleReset}>
+                    <lightning-icon icon-name="utility:refresh" size="x-small" class="slds-m-right_xx-small reset-icon"></lightning-icon>
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</template>

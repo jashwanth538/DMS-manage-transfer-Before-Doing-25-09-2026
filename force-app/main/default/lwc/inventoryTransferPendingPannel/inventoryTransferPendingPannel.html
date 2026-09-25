@@ -1,0 +1,246 @@
+<template>
+    <article class="slds-card custom-card">
+        <!-- Card Header -->
+        <div class="slds-card__header slds-grid header-container">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <span class="slds-icon_container slds-icon-standard-event" title="Pending Inventory Transfers">
+                        <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
+                    </span>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span class="slds-text-heading_small slds-truncate card-header-title">Pending Inventory Transfers</span>
+                    </h2>
+                </div>
+                <div class="slds-no-flex">
+                    <div class="slds-grid slds-grid_vertical-align-center slds-gutters_direct-xx-small">
+                        <template if:true={isBulkActionEnabled}>
+                            <button class="bulk-action-btn slds-m-right_small" onclick={openBulkConfirmModal}>
+                                Bulk Initiate ({selectedCount})
+                            </button>
+                        </template>
+                        <button class="fancy-refresh-btn" onclick={handleRefresh} title="Refresh">
+                            <svg class="refresh-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                                <path d="M16 3h5v5"></path>
+                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                                <path d="M8 21H3v-5"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+        </div>
+
+        <!-- Card Body -->
+        <div class="custom-card-body slds-is-relative">
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+            </template>
+
+            <!-- Error Notification -->
+            <template if:true={error}>
+                <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert">
+                    <span class="slds-assistive-text">error</span>
+                    <h2>Error loading inventory transfers: {error.message}</h2>
+                </div>
+            </template>
+
+            <!-- Custom Table for pending transfers -->
+            <template if:true={hasTransfers}>
+                <div class="table-container">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th class="checkbox-cell">
+                                    <input 
+                                        type="checkbox" 
+                                        class="custom-checkbox" 
+                                        onchange={handleSelectAll} 
+                                        checked={isAllSelected}
+                                    />
+                                </th>
+                                <th>Transfer Info</th>
+                                <th>Item Details</th>
+                                <th>Route</th>
+                                <th class="action-header">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={filteredAndSortedTransfers} for:item="item">
+                                <tr key={item.Id} class={item.rowClass}>
+                                    <td class="checkbox-cell">
+                                        <input 
+                                            type="checkbox" 
+                                            class="custom-checkbox" 
+                                            data-id={item.Id} 
+                                            onchange={handleSelectRow} 
+                                            checked={item.isSelected}
+                                        />
+                                    </td>
+                                    <td data-label="Transfer Info" class="bold-cell">
+                                        <div>
+                                            <a href={item.RecordUrl} class="transfer-link" target="_self">{item.TransferName}</a>
+                                        </div>
+                                        <div class="small-muted-text">Requested: {item.FormattedRequestedDate}</div>
+                                        <template if:true={item.RequestType}>
+                                            <div class="small-muted-text">Request Type: {item.RequestType}</div>
+                                        </template>
+                                        <template if:true={item.OrderAllocationName}>
+                                            <div class="small-muted-text mfg-info-text">Sales Allocation: {item.OrderAllocationName}</div>
+                                        </template>
+                                        <template if:true={item.OrderAllocationLineItemName}>
+                                            <div class="small-muted-text mfg-info-text">Sales Allocation Line: {item.OrderAllocationLineItemName}</div>
+                                        </template>
+                                    </td>
+                                    <td data-label="Item Details">
+                                        <div class="item-name-text">{item.ItemName}</div>
+                                        <div class="qty-pill">Qty: {item.TransferQty}</div>
+                                    </td>
+                                    <td data-label="Route">
+                                        <div class="route-container">
+                                            <div class="route-source">
+                                                <span class="loc-name">{item.SourceLocationName}</span>
+                                                <span class="route-arrow">→</span>
+                                            </div>
+                                            <div class="route-dest">
+                                                <span class="loc-name">{item.DestinationLocationName}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td data-label="Action" class="action-cell">
+                                        <button class="action-btn" onclick={openConfirmModal} data-id={item.Id}>
+                                            Initiate
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+
+            <!-- Empty State when no records are found -->
+            <template if:false={hasTransfers}>
+                <template if:false={isLoading}>
+                    <div class="empty-state-container">
+                        <lightning-icon icon-name="utility:inbox" size="large" alternative-text="No pending transfers" class="empty-state-icon"></lightning-icon>
+                        <h3 class="empty-state-title">No Pending Transfers</h3>
+                        <p class="empty-state-description">All requested transfers have been processed for the selected location filter.</p>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Pagination Controls -->
+            <template if:true={hasTransfers}>
+                <div class="slds-m-top_medium">
+                    <c-generic-pagination
+                        current-page={currentPage}
+                        page-size={pageSize}
+                        total-records={allFilteredTransfers.length}
+                        onpagechange={handlePageChange}>
+                    </c-generic-pagination>
+                </div>
+            </template>
+
+        </div>
+    </article>
+
+    <!-- Custom Confirmation Modal (outside card to avoid overflow clipping) -->
+    <template if:true={isModalOpen}>
+        <div class="modal-backdrop">
+            <div class="modal-container">
+                <header class="modal-header">
+                    <h2 class="modal-title">{modalTitle}</h2>
+                    <button class="close-btn" onclick={closeConfirmModal}>&times;</button>
+                </header>
+                <div class="modal-content">
+                    <template if:true={isBulkAction}>
+                        <p class="modal-msg">Are you sure you want to initiate <strong class="highlight-text">{selectedCount}</strong> inventory transfers in bulk?</p>
+                        <div class="action-effect-box" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-top: 8px; margin-bottom: 12px;">
+                            <div style="font-weight: 600; color: #0369a1; font-size: 0.85rem; margin-bottom: 4px;">What happens next:</div>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 0.825rem; color: #0c4a6e; line-height: 1.4;">
+                                <li>Transfer status will be updated to <strong>In Transit</strong></li>
+                                <li>Physical stock will be moved out from source location</li>
+                            </ul>
+                        </div>
+                        <div class="bulk-summary-list">
+                            <template for:each={bulkSelectedTransfers} for:item="t">
+                                <div key={t.Id} class="bulk-summary-item">
+                                    <div class="bulk-item-header">
+                                        <span class="bulk-transfer-name">{t.TransferName}</span>
+                                        <span class="bulk-qty">Qty: {t.TransferQty}</span>
+                                    </div>
+                                    <div class="bulk-item-body">
+                                        <span class="bulk-item-name">{t.ItemName}</span>
+                                        <span class="bulk-route">{t.SourceLocationName} ➔ {t.DestinationLocationName}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={isBulkAction}>
+                        <p class="modal-msg">Are you sure you want to initiate inventory transfer <strong class="highlight-text">{selectedTransferName}</strong>?</p>
+                        <div class="transfer-summary">
+                            <div class="summary-row">
+                                <span class="summary-label">Item:</span>
+                                <span class="summary-value">{selectedTransferItem}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">Quantity:</span>
+                                <span class="summary-value bold-text">{selectedTransferQty}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">Route:</span>
+                                <span class="summary-value">{selectedTransferSource} ➔ {selectedTransferDest}</span>
+                            </div>
+                        </div>
+                        <div class="action-effect-box" style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-top: 12px;">
+                            <div style="font-weight: 600; color: #0369a1; font-size: 0.85rem; margin-bottom: 4px;">What happens next:</div>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 0.825rem; color: #0c4a6e; line-height: 1.4;">
+                                <li>Transfer status will be updated to <strong>In Transit</strong></li>
+                                <li>Physical stock will be moved out from source location</li>
+                            </ul>
+                        </div>
+                    </template>
+                </div>
+                <footer class="modal-footer">
+                    <button class="cancel-btn" onclick={closeConfirmModal}>Cancel</button>
+                    <button class="confirm-btn" onclick={confirmAction}>{modalActionLabel}</button>
+                </footer>
+            </div>
+        </div>
+    </template>
+
+    <!-- Stale Data Warning Modal -->
+    <template if:true={isStaleModalOpen}>
+        <div class="modal-backdrop">
+            <div class="modal-container stale-modal-container">
+                <header class="modal-header stale-modal-header">
+                    <h2 class="modal-title stale-modal-title">
+                        <lightning-icon icon-name="utility:warning" size="small" variant="warning" class="slds-m-right_x-small"></lightning-icon>
+                        Action Already Performed
+                    </h2>
+                    <button class="close-btn" onclick={closeStaleModal}>&times;</button>
+                </header>
+                <div class="modal-content stale-modal-content">
+                    <div class="stale-icon-container">
+                        <lightning-icon icon-name="utility:warning" size="large" class="stale-warning-icon"></lightning-icon>
+                    </div>
+                    <p class="stale-message">{staleModalMessage}</p>
+                    <div class="stale-countdown-container">
+                        <div class="stale-countdown-bar">
+                            <div class="stale-countdown-fill" style={staleProgressWidth}></div>
+                        </div>
+                        <p class="stale-countdown-text">Auto-closing and refreshing in {staleCountdown} seconds...</p>
+                    </div>
+                </div>
+                <footer class="modal-footer">
+                    <button class="confirm-btn stale-close-btn" onclick={closeStaleModal}>Close & Refresh Now</button>
+                </footer>
+            </div>
+        </div>
+    </template>
+</template>

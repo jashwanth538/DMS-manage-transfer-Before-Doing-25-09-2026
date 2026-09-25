@@ -1,0 +1,314 @@
+<template>
+    <div class="premium-container">
+        <!-- Main Card -->
+        <div class="custom-card">
+            <!-- Header Section -->
+            <div class="card-header-bar">
+                <div class="header-container">
+                    <div class="header-icon-wrapper-main">
+                        <lightning-icon icon-name="custom:custom18" size="medium" class="header-main-icon" variant="inverse"></lightning-icon>
+                    </div>
+                    <div class="header-title-wrapper">
+                        <span class="header-title">Create Goods Receipt (GRN)</span>
+                        <span class="header-subtitle">Receive stock against a Purchase Order for the Requesting Account</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form State -->
+            <template if:true={isFormState}>
+                <!-- Pinned Section: Goods Receipt Information -->
+                <div class="goods-receipt-info-pinned">
+                    <div class="section-container">
+                        <h3 class="section-title">Purchase Order Details</h3>
+                        
+                        <div class="slds-grid slds-wrap slds-gutters">
+                            <!-- Purchase Order Lookup -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label required-field">
+                                    Search Purchase Order
+                                    <lightning-helptext content="Search and select the Purchase Order number."></lightning-helptext>
+                                </label>
+                                <div class="lookup-container">
+                                    <lightning-input
+                                        type="search"
+                                        placeholder="Search PO (e.g. PO-00001)..."
+                                        value={poSearchTerm}
+                                        onchange={handlePOSearch}
+                                        onfocus={handlePOFocus}
+                                        onblur={handlePOBlur}
+                                        disabled={isPOFieldDisabled}
+                                        variant="label-hidden"
+                                        class="custom-input-picker">
+                                    </lightning-input>
+                                    <template if:true={showDropdown}>
+                                        <div class="lookup-dropdown">
+                                            <template for:each={searchResults} for:item="result">
+                                                <div key={result.Id} class="lookup-item" data-id={result.Id} data-name={result.Name} onmousedown={handleSelectPO}>
+                                                    <lightning-icon icon-name="custom:custom18" size="small" class="slds-m-right_small dropdown-icon"></lightning-icon>
+                                                    <span>{result.Name}</span>
+                                                </div>
+                                            </template>
+                                            <template if:false={searchResults.length}>
+                                                <div class="lookup-item no-results">No eligible POs found</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Supplying Account (Read-Only) -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label">Supplying Account</label>
+                                <input 
+                                    type="text" 
+                                    value={supplyingAccountName} 
+                                    readonly 
+                                    class="custom-readonly-input" 
+                                    placeholder="N/A" />
+                            </div>
+
+                            <!-- Requesting Account (Read-Only) -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label">Requesting Account</label>
+                                <input 
+                                    type="text" 
+                                    value={requestingAccountName} 
+                                    readonly 
+                                    class="custom-readonly-input" 
+                                    placeholder="N/A" />
+                            </div>
+
+                            <!-- Inventory Location (Read-Only) -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label">Inventory Location</label>
+                                <input 
+                                    type="text" 
+                                    value={warehouseName} 
+                                    readonly 
+                                    class="custom-readonly-input" 
+                                    placeholder="N/A" />
+                            </div>
+                        </div>
+
+                        <div class="slds-grid slds-wrap slds-gutters slds-m-top_small">
+                            <!-- PO Status (Read-Only) -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label">PO Status</label>
+                                <input 
+                                    type="text" 
+                                    value={poStatus} 
+                                    readonly 
+                                    class="custom-readonly-input" 
+                                    placeholder="N/A" />
+                            </div>
+
+                            <!-- Receipt Date (Required Input) -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label required-field">Receipt Date</label>
+                                <lightning-input 
+                                    type="date" 
+                                    value={receiptDate} 
+                                    onchange={handleReceiptDateChange} 
+                                    variant="label-hidden" 
+                                    required
+                                    class="custom-date-picker">
+                                </lightning-input>
+                            </div>
+
+                            <!-- Delivery Note No. -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label">Delivery Note No.</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Enter delivery note number" 
+                                    value={deliveryNoteNo} 
+                                    oninput={handleDeliveryNoteChange}
+                                    class="custom-text-input" />
+                            </div>
+
+                            <!-- Remarks -->
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                <label class="custom-label">Remarks</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="Enter remarks (optional)" 
+                                    value={remarks} 
+                                    oninput={handleRemarksChange}
+                                    class="custom-text-input" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scrollable Body Content (Line Items & Actions) -->
+                <div class="card-body-scrollable">
+                    <!-- Section: PO Line Items -->
+                    <template if:true={purchaseOrderId}>
+                        <div class="section-container slds-m-bottom_medium">
+                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_medium">
+                                <div>
+                                    <h3 class="section-title slds-m-bottom_none">PO Line Items</h3>
+                                    <span class="section-subtitle">Items to receive for {poName}</span>
+                                </div>
+                            </div>
+
+                            <!-- Loading Indicator inside Table Section -->
+                            <template if:true={isLoadingItems}>
+                                <div class="spinner-container">
+                                    <lightning-spinner alternative-text="Loading items..." size="medium" variant="brand"></lightning-spinner>
+                                </div>
+                            </template>
+
+                            <!-- Items Table -->
+                            <template if:false={isLoadingItems}>
+                                <div class="table-scrollable">
+                                    <table class="custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 4rem;">#</th>
+                                                <th>Product / Item</th>
+                                                <th class="slds-text-align_right">Ordered Quantity</th>
+                                                <th class="slds-text-align_right">Already Received Quantity</th>
+                                                <th class="slds-text-align_right">Remaining Quantity</th>
+                                                <th class="slds-text-align_right">Unit Price</th>
+                                                <th style="width: 10rem;" class="required-field">Receive Qty</th>
+                                                <th class="slds-text-align_right">Line Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template if:true={lines.length}>
+                                                <template for:each={lines} for:item="line">
+                                                    <tr key={line.poli.Id} class="table-row">
+                                                        <td>{line.rowNumber}</td>
+                                                        <td>
+                                                            <div class="item-cell">
+                                                                <a href={line.itemUrl} class="custom-link item-name" target="_blank">{line.itemName}</a>
+                                                                <template if:true={line.itemCode}>
+                                                                    <span class="item-description">Code: {line.itemCode}</span>
+                                                                </template>
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-text-align_right">{line.orderedQty}</td>
+                                                        <td class="slds-text-align_right">{line.previouslyReceivedQty}</td>
+                                                        <td class="slds-text-align_right remaining-qty-col">{line.remainingQty}</td>
+                                                        <td class="slds-text-align_right">{line.formattedUnitPrice}</td>
+                                                        <td>
+                                                            <div class="input-wrapper">
+                                                                <input 
+                                                                    type="number" 
+                                                                    value={line.receiveQty} 
+                                                                    data-id={line.poli.Id}
+                                                                    oninput={handleReceiveQtyChange}
+                                                                    min="0"
+                                                                    max={line.remainingQty}
+                                                                    disabled={line.isFullyReceived}
+                                                                    class="table-number-input" />
+                                                                <template if:true={line.inputError}>
+                                                                    <span class="error-text">{line.inputError}</span>
+                                                                </template>
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-text-align_right line-amount-col">{line.formattedLineAmount}</td>
+                                                    </tr>
+                                                </template>
+                                            </template>
+                                            <template if:false={lines.length}>
+                                                <tr>
+                                                    <td colspan="8" class="slds-text-align_center slds-p-around_medium empty-message">
+                                                        No line items found for this Purchase Order.
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Table Totals -->
+                                <div class="slds-grid slds-grid_align-end slds-m-top_medium totals-container">
+                                    <div class="total-badge slds-m-right_large">
+                                        <span class="total-label">Total Receive Qty:</span>
+                                        <span class="total-value">{totalReceiveQty}</span>
+                                    </div>
+                                    <div class="total-badge">
+                                        <span class="total-label">Total Amount:</span>
+                                        <span class="total-value">{formattedTotalAmount}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Informational Note -->
+                    <div class="info-banner slds-p-around_small slds-m-bottom_large slds-grid slds-grid_vertical-align-center">
+                        <div class="info-icon-wrapper slds-m-right_small">
+                            <lightning-icon icon-name="utility:info" size="x-small" variant="inverse" class="info-banner-icon"></lightning-icon>
+                        </div>
+                        <span class="info-text">Creating GRN will update inventory for {requestingAccountName} and release transit/reserved quantities.</span>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="footer-bar slds-p-around_medium">
+                    <div class="slds-grid slds-grid_align-center">
+                        <button class="btn-reset slds-m-right_medium" onclick={handleReset}>Reset</button>
+                        <template if:true={showReceiveButton}>
+                            <button class="btn-receive" onclick={handleReceiveInventory} disabled={isSaveDisabled}>Create GRN</button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Loading/Processing State -->
+            <template if:true={isLoadingState}>
+                <div class="processing-container slds-align_absolute-center slds-flex-column">
+                    <div class="spinner-premium-wrapper slds-m-bottom_large">
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-glow"></div>
+                    </div>
+                    <h2 class="processing-title">Creating GRN...</h2>
+                    <p class="processing-subtitle">Updating inventory stock levels for {requestingAccountName}.</p>
+                </div>
+            </template>
+
+            <!-- Success Card State -->
+            <template if:true={isSuccessState}>
+                <div class="success-card-container slds-align_absolute-center slds-flex-column">
+                    <div class="success-icon-pulsing slds-m-bottom_large">
+                        <lightning-icon icon-name="action:approval" size="medium" class="success-checkmark-icon"></lightning-icon>
+                    </div>
+                    <h2 class="success-title">{newGrnName} Created Successfully</h2>
+                    <p class="success-subtitle">Received inventory has been updated for <strong>{requestingAccountName}</strong>.</p>
+                    
+                    <div class="success-po-details slds-m-vertical_large">
+                        <div class="po-detail-row">
+                            <span class="detail-label">GRN Name:</span>
+                            <span class="detail-value highlight-value">{newGrnName}</span>
+                        </div>
+                        <div class="po-detail-row">
+                            <span class="detail-label">Purchase Order:</span>
+                            <span class="detail-value">{poName}</span>
+                        </div>
+                        <div class="po-detail-row">
+                            <span class="detail-label">Requesting Account:</span>
+                            <span class="detail-value">{requestingAccountName}</span>
+                        </div>
+                        <div class="po-detail-row">
+                            <span class="detail-label">Supplying Account:</span>
+                            <span class="detail-value">{supplyingAccountName}</span>
+                        </div>
+                        <div class="po-detail-row">
+                            <span class="detail-label">Inventory Location:</span>
+                            <span class="detail-value">{warehouseName}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="success-actions">
+                        <button class="action-btn-primary slds-m-right_medium" onclick={handleViewRecord}>View Record</button>
+                        <button class="action-btn-secondary" onclick={handleCloseSuccess}>Close</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</template>

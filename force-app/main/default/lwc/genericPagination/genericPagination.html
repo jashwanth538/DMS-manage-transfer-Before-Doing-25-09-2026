@@ -1,0 +1,134 @@
+<template>
+  <div class="pagination-panel slds-p-horizontal_medium slds-p-vertical_small">
+    <div
+      class="slds-grid slds-wrap slds-grid_align-spread slds-grid_vertical-align-center pagination-layout"
+    >
+      <!-- Left Info Block: Range text / Page Size selector -->
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 info-side">
+        <template if:true={showPageSizeSelector}>
+          <div class="page-size-container">
+            <span class="page-size-label">Show</span>
+            <div class="page-size-select-wrapper">
+              <select class="page-size-select" onchange={handlePageSizeChange}>
+                <template for:each={pageSizes} for:item="opt">
+                  <option key={opt.value} value={opt.value} selected={opt.isSelected}>
+                    {opt.label}
+                  </option>
+                </template>
+              </select>
+            </div>
+            <span class="page-size-label">records</span>
+          </div>
+        </template>
+        <template if:false={showPageSizeSelector}>
+          <template if:false={totalRecords}>
+            <p class="info-text empty">No entries to display</p>
+          </template>
+        </template>
+      </div>
+
+      <!-- Centered Navigation Chevrons -->
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 nav-side">
+        <div
+          class="slds-grid slds-grid_align-center slds-grid_vertical-align-center pagination-container"
+        >
+          <!-- First page button -->
+          <button
+            class="nav-btn first-btn"
+            onclick={handleFirstPage}
+            disabled={isFirstPage}
+            title="First Page"
+          >
+            <lightning-icon
+              icon-name="utility:jump_to_left"
+              size="x-small"
+              class="nav-icon"
+            ></lightning-icon>
+          </button>
+
+          <!-- Previous button -->
+          <button
+            class="nav-btn prev-btn"
+            onclick={handlePrev}
+            disabled={isFirstPage}
+            title="Previous Page"
+          >
+            <lightning-icon
+              icon-name="utility:chevronleft"
+              size="x-small"
+              class="nav-icon"
+            ></lightning-icon>
+          </button>
+
+          <!-- Page Number Indicator -->
+          <span class="pagination-page-indicator"
+            >Page {currentPage} of {totalPages}</span
+          >
+
+          <!-- Next button -->
+          <button
+            class="nav-btn next-btn"
+            onclick={handleNext}
+            disabled={isLastPage}
+            title="Next Page"
+          >
+            <lightning-icon
+              icon-name="utility:chevronright"
+              size="x-small"
+              class="nav-icon"
+            ></lightning-icon>
+          </button>
+
+          <!-- Last page button -->
+          <button
+            class="nav-btn last-btn"
+            onclick={handleLastPage}
+            disabled={isLastPage}
+            title="Last Page"
+          >
+            <lightning-icon
+              icon-name="utility:jump_to_right"
+              size="x-small"
+              class="nav-icon"
+            ></lightning-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Block: Go to Page Button & Popover list -->
+      <div
+        class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 action-side"
+      >
+        <template if:true={showGoTo}>
+          <div class="go-to-wrapper">
+            <button class="go-to-btn" onclick={toggleGoToPopup}>
+              Go to Page
+            </button>
+
+            <template if:true={isGoToPopupOpen}>
+              <!-- Backdrop to capture clicks outside -->
+              <div class="popover-backdrop" onclick={closeGoToPopup}></div>
+
+              <!-- Popover element list -->
+              <div class="popover-container">
+                <div class="popover-header">Select Page</div>
+                <ul class="page-list">
+                  <template for:each={pageListOptions} for:item="p">
+                    <li
+                      key={p.value}
+                      class={p.className}
+                      data-page={p.value}
+                      onclick={handleGoToPageClick}
+                    >
+                      Page {p.label}
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</template>

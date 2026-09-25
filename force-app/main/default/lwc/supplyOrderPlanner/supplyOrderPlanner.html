@@ -1,0 +1,653 @@
+<template>
+  <div class="app-wrapper">
+    <!-- Spinner for Loading States -->
+    <template if:true={isLoading}>
+      <lightning-spinner alternative-text="Loading Plan Data..." size="medium" variant="brand"></lightning-spinner>
+    </template>
+
+    <!-- Header Block -->
+    <!-- Removed big gradient header -->
+
+
+
+    <!-- Error Messages -->
+    <template if:true={errorMessage}>
+      <div class="custom-alert alert-warning">
+        <lightning-icon icon-name="utility:warning" alternative-text="Warning" size="small" variant="warning"
+          class="slds-m-right_x-small"></lightning-icon>
+        <span>{errorMessage}</span>
+      </div>
+    </template>
+
+    <!-- Main Workspace (Shown when data is loaded) -->
+    <template if:true={showTable}>
+      <div class="build-plan-area" style="
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          min-width: 0;
+          flex-grow: 1;
+          height: 100%;
+        ">
+        <!-- Section Header -->
+        <div class="slds-m-top_small slds-m-bottom_xx-small" style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+          ">
+          <h2 class="section-title">Sales Allocation Planner</h2>
+          <button class="btn-secondary" style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding: 6px 12px;
+              font-size: 0.85rem;
+              height: auto;
+            " onclick={handleRefreshPlan} title="Refresh Plan Data">
+            <lightning-icon icon-name="utility:refresh" alternative-text="Refresh Plan" size="x-small"
+              style="--slds-c-icon-color-foreground: #475569"></lightning-icon>
+            Refresh Plan
+          </button>
+        </div>
+
+        <!-- Reusable Generic Search Component integrated via LMS -->
+        <c-generic-search-and-filter-panel class="generic-search-panel" search-label="Search Products"
+          search-placeholder="Search by product name, SALI number or Product code..." filter-label="Sort By"
+          filter-column="SortOrder" filter-placeholder="Select sorting..." filter-options={sortOptions}
+          selected-filter-value={sortOption} enable-lms="true" search-text={searchKey}>
+        </c-generic-search-and-filter-panel>
+
+        <!-- Planning Grid Table -->
+        <div class="table-container">
+          <table class="planner-table">
+            <thead>
+              <tr>
+                <th rowspan="2" class="col-product" style="vertical-align: middle">
+                  Product
+                </th>
+                <th rowspan="2" class="col-req-qty" style="vertical-align: middle">
+                  Required Qty
+                </th>
+                <th colspan="2" style="text-align: center">Reserve</th>
+                <template if:true={showTransferColumns}>
+                  <th colspan={transferHeaderColspan} style="text-align: center; position: relative; overflow: visible;">
+                    <div class="header-with-tooltip-center">
+                      <span>Transfer</span>
+                      <div class="custom-tooltip-wrapper slds-m-left_xx-small">
+                        <button type="button" class="tooltip-icon-btn" aria-label="Transfer Information">
+                          <lightning-icon icon-name="utility:info" size="xx-small" class="help-info-icon"></lightning-icon>
+                        </button>
+                        <div class="custom-tooltip-popover transfer-tooltip-popover">
+                          <div class="tooltip-arrow"></div>
+                          <div class="tooltip-content">
+                            <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-inner-icon slds-m-right_xx-small"></lightning-icon>
+                            <span>Displays eligible partner accounts with available inventory that can be used to fulfill the required quantity. The requesting account is excluded from the transfer options.</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </th>
+                </template>
+                <th style="text-align: center">{procurementHeaderLabel}</th>
+                <th rowspan="2" class="col-coverage" style="vertical-align: middle">
+                  Coverage Status
+                </th>
+                <th rowspan="2" class="col-review" style="vertical-align: middle">
+                  <div>Review Status</div>
+                  <div style="
+                      margin-top: 6px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      gap: 4px;
+                      font-weight: normal;
+                      font-size: 0.75rem;
+                    ">
+                    <input type="checkbox" checked={isAllReviewed} onchange={handleSelectAllReview}
+                      disabled={isAllReviewedDisabled} class="custom-review-checkbox" style="margin: 0" />
+                    <span style="color: #64748b; font-weight: 500">Select All</span>
+                  </div>
+                </th>
+              </tr>
+              <tr>
+                <!-- Under Reserve -->
+                <th class="col-reserve-avail" style="font-size: 0.78rem; font-weight: 600">
+                  <div>{planData.destinationLocationName}</div>
+                  <template if:true={isSublabelRed}>
+                    <div style="
+                        font-size: 0.65rem;
+                        color: #ef4444;
+                        font-weight: bold;
+                        margin-top: 2px;
+                      ">
+                      {destinationLocationSublabel}
+                    </div>
+                  </template>
+                  <template if:false={isSublabelRed}>
+                    <div style="
+                        font-size: 0.65rem;
+                        color: #64748b;
+                        font-weight: normal;
+                        margin-top: 2px;
+                      ">
+                      {destinationLocationSublabel}
+                    </div>
+                  </template>
+                </th>
+                <th class="col-reserve-qty" style="font-size: 0.78rem">
+                  Quantity
+                </th>
+
+                <!-- Under Transfer -->
+                <template if:true={showTransferColumns}>
+                  <template for:each={transferLocations} for:item="loc">
+                    <th key={loc.locationId} class="col-transfer" style="font-size: 0.78rem; font-weight: 600">
+                      <div style="
+                          font-weight: 600;
+                          font-size: 0.78rem;
+                          text-align: center;
+                          white-space: nowrap;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          width: 100%;
+                        ">
+                        {loc.locationName}
+                      </div>
+                      <div style="
+                          font-size: 0.65rem;
+                          color: #64748b;
+                          font-weight: normal;
+                          margin-top: 2px;
+                        ">
+                        Available
+                      </div>
+                    </th>
+                  </template>
+                </template>
+
+                <!-- Under Procurement -->
+                <th class="col-procure-qty" style="font-size: 0.78rem">
+                  Quantity
+                </th>
+                <!-- <th class="col-remaining-qty" style="font-size: 0.78rem;">Remaining Qty</th> -->
+              </tr>
+            </thead>
+            <tbody>
+              <template for:each={pagedLineItems} for:item="item">
+                <tr key={item.lineItemId}>
+                  <!-- Product details -->
+                  <td class="product-cell">
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <lightning-icon icon-name="utility:inbox" size="small"
+                        style="--slds-c-icon-color-foreground: #64748b"></lightning-icon>
+                      <div>
+                        <div style="
+                            font-weight: 700;
+                            color: #1e293b;
+                            font-size: 0.9rem;
+                          ">
+                          {item.itemName}
+                        </div>
+                        <div style="
+                            font-size: 0.75rem;
+                            color: #64748b;
+                            font-weight: 500;
+                          ">
+                          {item.lineItemName}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Required Qty -->
+                  <td class="qty-cell" style="text-align: center">
+                    <span style="
+                        font-weight: 700;
+                        font-size: 1.05rem;
+                        color: #334155;
+                      ">{item.requiredQty}</span>
+                  </td>
+
+                  <!-- Reserve Column Group -->
+                  <td colspan="2" class="planning-cell-block">
+                    <template if:true={item.hasDestinationInventory}>
+                      <template if:true={isLocationActive}>
+                        <div class="planning-cell-top">
+                          <div class="stock-display-container">
+                            <button type="button" class="stock-qty-link"
+                              data-item-id={item.itemId}
+                              data-location-id={planData.destinationLocationId}
+                              onclick={handleStockQtyClick}
+                              title="Click to view Inventory Availability">
+                              <span class={item.destStockClass}>{item.reserveQty} / {item.destinationStockDisplay}</span>
+                            </button>
+                          </div>
+                          <div class="input-display-container">
+                            <lightning-input type="number" variant="label-hidden" value={item.reserveQty}
+                              data-item-id={item.itemId} onchange={handleReserveChange} onkeydown={handleNumberKeyDown}
+                              min="0" step="1" pattern="[0-9]*" class={item.reserveInputClass}
+                              disabled={item.isReserveDisabled} title={item.reserveTitle}>
+                            </lightning-input>
+                          </div>
+                        </div>
+                        <div class="planning-cell-bottom">
+                          Total Planned: {item.reserveQty}
+                        </div>
+                      </template>
+                      <template if:false={isLocationActive}>
+                        <template if:false={isLocationConfigured}>
+                          <div class="slds-align_absolute-center" style="
+                              height: 100%;
+                              color: #ef4444;
+                              font-size: 0.75rem;
+                              font-weight: 600;
+                              padding: 16px 8px;
+                              text-align: center;
+                            ">
+                            Location is not configured
+                          </div>
+                        </template>
+                        <template if:true={isLocationConfigured}>
+                          <div class="slds-align_absolute-center" style="
+                              height: 100%;
+                              color: #ef4444;
+                              font-size: 0.75rem;
+                              font-weight: 600;
+                              padding: 16px 8px;
+                              text-align: center;
+                            ">
+                            Location is inactive
+                          </div>
+                        </template>
+                      </template>
+                    </template>
+                    <template if:false={item.hasDestinationInventory}>
+                      <div class="no-inventory-container">
+                        <div class="no-inventory-text-red">N/A</div>
+                        <div class="no-inventory-subtext">Item not available for that location</div>
+                      </div>
+                    </template>
+                  </td>
+
+                  <!-- Transfer Columns -->
+                  <template if:true={showTransferColumns}>
+                    <template for:each={item.transfers} for:item="t">
+                      <td key={t.locationId} class="planning-cell-block" style="min-width: 220px">
+                        <template if:true={t.hasInventory}>
+                          <div class="planning-cell-top">
+                            <div class="stock-display-container">
+                              <button type="button" class="stock-qty-link"
+                                data-item-id={item.itemId}
+                                data-location-id={t.locationId}
+                                onclick={handleStockQtyClick}
+                                title="Click to view Inventory Availability">
+                                <span class={t.stockClass}>{t.qty} / {t.availableStockDisplay}</span>
+                              </button>
+                            </div>
+                            <div class="input-display-container">
+                              <lightning-input type="number" variant="label-hidden" value={t.qty} data-item-id={item.itemId}
+                                data-loc-id={t.locationId} onchange={handleTransferChange} onkeydown={handleNumberKeyDown}
+                                min="0" step="1" pattern="[0-9]*" class={t.inputClass}
+                                disabled={t.isDisabled} title={t.title}>
+                              </lightning-input>
+                            </div>
+                          </div>
+                          <div class="planning-cell-bottom">
+                            Total Planned: {t.qty}
+                          </div>
+                        </template>
+                        <template if:false={t.hasInventory}>
+                          <div class="no-inventory-container">
+                            <div class="no-inventory-text-red">N/A</div>
+                            <div class="no-inventory-subtext">Item not available for that location</div>
+                          </div>
+                        </template>
+                      </td>
+                    </template>
+                  </template>
+
+                  <!-- Procurement Column Group -->
+                  <td class="planning-cell-block">
+                    <div class="planning-cell-top" style="justify-content: center">
+                      <div class="input-display-container">
+                        <lightning-input type="number" variant="label-hidden" value={item.procureQty}
+                          data-item-id={item.itemId} onchange={handleProcureChange} onkeydown={handleNumberKeyDown}
+                          min="0" step="1" pattern="[0-9]*" class="qty-input"
+                          disabled={item.isProcureDisabled} title={item.procureTitle}>
+                        </lightning-input>
+                      </div>
+                    </div>
+                    <div class="planning-cell-bottom">
+                      Total Planned: {item.procureQty}
+                    </div>
+                  </td>
+
+                  <!-- Remaining Qty -->
+                  <!-- <td class="remaining-qty-cell"
+                                        style="text-align: center; vertical-align: middle; font-weight: 700; color: #1e293b; font-size: 1.05rem;">
+                                        {item.remainingQty}
+                                    </td> -->
+
+                  <!-- Coverage Status -->
+                  <td class="status-cell" style="text-align: center; vertical-align: middle">
+                    <div class="coverage-container">
+                      <template if:true={item.isCovered}>
+                        <div class="coverage-container covered">
+                          <span style="font-size: 0.85rem">100% Covered</span>
+                          <lightning-icon icon-name="utility:success" size="x-small" variant="success"
+                            class="coverage-icon"></lightning-icon>
+                        </div>
+                      </template>
+                      <template if:false={item.isCovered}>
+                        <div class="coverage-container not-covered">
+                          <span style="font-size: 0.85rem; color: #d97706">{item.coverageText}</span>
+                        </div>
+                      </template>
+                    </div>
+                  </td>
+                  <!-- Review Status -->
+                  <td class="review-cell" style="
+                      text-align: center;
+                      vertical-align: middle;
+                      padding: 16px 12px;
+                    ">
+                    <div class="checkbox-wrapper">
+                      <template if:true={item.isCovered}>
+                        <template if:true={item.isUpdatingReview}>
+                          <div class="spinner-container">
+                            <div class="small-spinner"></div>
+                          </div>
+                        </template>
+                        <template if:false={item.isUpdatingReview}>
+                          <input type="checkbox" checked={item.isReviewed} data-line-item-id={item.lineItemId}
+                            onchange={handleReviewChange} class="custom-review-checkbox" disabled={isPlanningExecuted} />
+                        </template>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+
+              <!-- Table Empty State -->
+              <template if:false={hasMatchingItems}>
+                <tr>
+                  <td colspan={totalColumns} style="
+                      padding: 48px 24px;
+                      text-align: center;
+                      background-color: #ffffff;
+                    ">
+                    <div style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                      ">
+                      <lightning-icon icon-name="utility:search" size="medium"
+                        class="empty-state-search-icon"></lightning-icon>
+                      <span style="
+                          font-size: 1.05rem;
+                          font-weight: 600;
+                          color: #475569;
+                        ">No products match your search</span>
+                      <span style="
+                          font-size: 0.85rem;
+                          color: #94a3b8;
+                          max-width: 320px;
+                          line-height: 1.4;
+                        ">We couldn't find any items matching "{searchKey}". Try
+                        refining your spelling or keyword.</span>
+                      <button class="btn-secondary slds-m-top_small" style="
+                          padding: 6px 16px;
+                          font-size: 0.8rem;
+                          height: auto;
+                        " onclick={handleClearSearch}>
+                        Reset Search
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+
+              <!-- Footer Row Totals -->
+              <tr class="table-footer">
+                <td class="product-cell" style="font-weight: 700">Total Qty</td>
+                <td class="qty-cell" style="text-align: center; font-weight: 700">
+                  {totals.required}
+                </td>
+                <td colspan="2" style="
+                    text-align: center;
+                    font-weight: 700;
+                    color: #1e40af;
+                    background-color: #eff6ff;
+                  ">
+                  {totals.reserve}
+                </td>
+                <template if:true={showTransferColumns}>
+                  <template for:each={totals.transfers} for:item="t">
+                    <td key={t.locationId} style="
+                        text-align: center;
+                        font-weight: 700;
+                        color: #1e40af;
+                        background-color: #eff6ff;
+                        min-width: 150px;
+                        padding: 14px 12px;
+                        border-right: 1px solid #cbd5e1;
+                        box-sizing: border-box;
+                      ">
+                      {t.total}
+                    </td>
+                  </template>
+                </template>
+                <td style="
+                    text-align: center;
+                    font-weight: 700;
+                    color: #1e40af;
+                    background-color: #eff6ff;
+                  ">
+                  {totals.procure}
+                </td>
+                <!-- <td style="text-align: center; font-weight: 700; color: #cbd5e1;">{totals.remaining}
+                                </td> -->
+                <td class="status-cell" style="text-align: center; font-weight: 700; color: #1e293b">
+                  Planned: {totals.planned}
+                </td>
+                <!-- Empty Cell under Review Status -->
+                <td class="review-cell" style="background-color: #f8fafc"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Panel -->
+        <div class="slds-m-top_medium">
+          <c-generic-pagination current-page={currentPage} page-size={pageSize}
+            total-records={filteredAndSortedLineItems.length} enable-lms="true"
+            onpagechange={handlePageChange}>
+          </c-generic-pagination>
+        </div>
+      </div>
+    </template>
+
+    <!-- Fallback Empty State -->
+    <template if:false={showTable}>
+      <template if:false={errorMessage}>
+        <div class="empty-state">
+          <lightning-icon icon-name="utility:search" size="large" class="empty-icon"></lightning-icon>
+          <p style="font-size: 1.1rem; font-weight: 500">
+            Enter a Sales Allocation Number to plan distributions.
+          </p>
+          <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px">
+            Use "SA - 0000" to search our test plan.
+          </p>
+        </div>
+      </template>
+    </template>
+
+    <!-- Confirmation Summary Modal -->
+    <template if:true={isModalOpen}>
+      <div class="modal-backdrop">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 class="modal-title">Planning Allocation Summary</h3>
+            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick={closeModal}>
+              <lightning-icon icon-name="utility:close" alternative-text="close" size="x-small"
+                variant="inverse"></lightning-icon>
+              <span class="slds-assistive-text">Close</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="slds-text-align_center slds-m-bottom_medium">
+              <lightning-icon icon-name="action:approval" size="medium"></lightning-icon>
+              <h4 class="slds-text-heading_small slds-m-top_small" style="font-weight: 700; color: #059669">
+                {modalHeader}
+              </h4>
+              <p class="slds-m-top_xx-small" style="color: #64748b">
+                {modalSubtitle}
+              </p>
+            </div>
+
+            <div class="summary-list">
+              <!-- Reservations -->
+              <template if:true={modalSummary.reservations.length}>
+                <div class="summary-item">
+                  <div class="summary-title" style="color: var(--brand-success)">
+                    📌 Stock Reservations (Warehouse:
+                    {planData.destinationLocationName})
+                  </div>
+                  <ul class="summary-details">
+                    <template for:each={modalSummary.reservations} for:item="item">
+                      <li key={item.itemName}>
+                        {item.itemName}: Reserve
+                        <strong>{item.qty}</strong> units.
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+
+              <!-- Transfers -->
+              <template if:true={modalSummary.transfers.length}>
+                <div class="summary-item">
+                  <div class="summary-title" style="color: var(--brand-info)">
+                    ✈️ Stock Transfers Initiated
+                  </div>
+                  <ul class="summary-details">
+                    <template for:each={modalSummary.transfers} for:item="item">
+                      <li key={item.key}>
+                        Transfer <strong>{item.qty}</strong> units of
+                        {item.itemName} from {item.fromLoc} to
+                        {planData.destinationLocationName}.
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+
+              <!-- Procurement -->
+              <template if:true={modalSummary.procurements.length}>
+                <div class="summary-item">
+                  <div class="summary-title" style="color: var(--brand-warning)">
+                    🛒 Procurement Purchase Requisitions
+                  </div>
+                  <ul class="summary-details">
+                    <template for:each={modalSummary.procurements} for:item="item">
+                      <li key={item.itemName}>
+                        Order <strong>{item.qty}</strong> units of
+                        {item.itemName} from vendor.
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-primary" onclick={closeModal}>Done</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Insufficient Stock Error Modal -->
+    <template if:true={isErrorModalOpen}>
+      <div class="modal-backdrop">
+        <div class="modal-content" style="border: 2px solid #ef4444">
+          <div class="modal-header" style="background-color: #fee2e2; border-bottom: 1px solid #fecaca">
+            <h3 class="modal-title" style="color: #991b1b">
+              Insufficient Stock Available
+            </h3>
+            <button class="slds-button slds-button_icon" title="Close" onclick={handleRefreshPlanData}
+              style="color: #991b1b; padding: 4px">
+              <lightning-icon icon-name="utility:close" alternative-text="close" size="x-small"
+                style="--slds-c-icon-color-foreground: #991b1b"></lightning-icon>
+              <span class="slds-assistive-text">Close</span>
+            </button>
+          </div>
+          <div class="modal-body" style="padding: 32px 24px; text-align: center">
+            <div class="slds-m-bottom_medium">
+              <lightning-icon icon-name="utility:warning" size="large"
+                style="--slds-c-icon-color-foreground: #ef4444"></lightning-icon>
+            </div>
+            <h4 class="slds-text-heading_small" style="
+                font-weight: 700;
+                color: #991b1b;
+                margin-bottom: 12px;
+                font-size: 1.15rem;
+              ">
+              Unable to Confirm Plan
+            </h4>
+            <p style="
+                color: #374151;
+                font-size: 0.95rem;
+                margin-bottom: 20px;
+                line-height: 1.5;
+              ">
+              {errorModalMessage}
+            </p>
+            <div style="
+                background-color: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 12px;
+                display: inline-block;
+              ">
+              <p style="color: #64748b; font-size: 0.8rem; font-weight: 500">
+                Auto-reloading planner with fresh stock levels in
+                {errorCountdown} seconds...
+              </p>
+            </div>
+          </div>
+          <div class="modal-footer" style="
+              background: #f8fafc;
+              display: flex;
+              justify-content: center;
+              gap: 12px;
+              padding: 16px 24px;
+            ">
+            <button class="btn-primary" onclick={handleRefreshPlanData} style="
+                background: #dc2626;
+                border-color: #dc2626;
+                box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
+              ">
+              Refresh Plan Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Direct Inventory Details Popup (Image 1) -->
+    <template if:true={isInventoryModalOpen}>
+      <c-inventory-availability
+        record-id={planId}
+        item-id={selectedInventoryItemId}
+        location-id={selectedInventoryLocationId}
+        account-id={selectedInventoryAccountId}
+        is-modal="true"
+        onclosemodal={closeInventoryModal}>
+      </c-inventory-availability>
+    </template>
+  </div>
+</template>

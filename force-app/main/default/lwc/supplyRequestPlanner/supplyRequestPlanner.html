@@ -1,0 +1,680 @@
+<template>
+    <div class="planner-container">
+
+        <!-- Loading Overlay -->
+        <template if:true={isLoading}>
+            <div class="custom-loading-overlay">
+                <div class="spinner-content">
+                    <div class="custom-spinner-ring"></div>
+                    <span class="spinner-text">Loading Supply Requests...</span>
+                </div>
+            </div>
+        </template>
+
+        <!-- =======================================================
+             Header & Filter Card
+        ======================================================== -->
+        <div class="header-card">
+            <div class="header-accent-bar"></div>
+
+            <div class="header-main-row">
+                <!-- Title & Meta -->
+                <div class="header-branding">
+                    <div class="header-icon-wrapper">
+                        <lightning-icon icon-name="standard:orders" size="medium"
+                            alternative-text="Supply Requests"></lightning-icon>
+                    </div>
+                    <div class="header-titles">
+                        <div class="title-row">
+                            <h1 class="page-title">Supply Request Planner</h1>
+                            <span class="total-badge">{totalRequestsCount} Total Requests</span>
+                        </div>
+                        <p class="page-subtitle">Search, filter, and plan Supply Requests into Order Allocations</p>
+                    </div>
+                </div>
+
+                <!-- Header Actions -->
+                <div class="header-actions">
+                    <button class="refresh-action-btn" onclick={handleRefresh} title="Refresh Records">
+                        <lightning-icon icon-name="utility:refresh" size="xx-small"
+                            class="refresh-icon"></lightning-icon>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls Row -->
+            <div class="filter-controls-container">
+                <div class="filter-grid">
+                    <!-- Search Input -->
+                    <div class="filter-item search-item">
+                        <label class="filter-label">Search</label>
+                        <div class="search-input-box">
+                            <lightning-icon icon-name="utility:search" size="x-small"
+                                class="search-icon"></lightning-icon>
+                            <input class="custom-search-input" type="search"
+                                placeholder="Search by Request #, Account, Product..." value={searchTerm}
+                                oninput={handleSearchChange} />
+                        </div>
+                    </div>
+
+                    <!-- Account Combobox -->
+                    <!-- <div class="filter-item combobox-item">
+                        <label class="filter-label">Account</label>
+                        <lightning-combobox name="accountFilter" value={selectedAccountId} options={accountOptions}
+                            onchange={handleAccountChange} placeholder="All Accounts" variant="label-hidden">
+                        </lightning-combobox>
+                    </div> -->
+
+                    <!-- Product Combobox -->
+                    <!-- <div class="filter-item combobox-item">
+                        <label class="filter-label">Product</label>
+                        <lightning-combobox name="productFilter" value={selectedProductId} options={itemOptions}
+                            onchange={handleProductChange} placeholder="All Products" variant="label-hidden">
+                        </lightning-combobox>
+                    </div> -->
+
+                    <!-- Status Combobox -->
+                    <!-- <div class="filter-item combobox-item">
+                        <label class="filter-label">Status</label>
+                        <lightning-combobox name="statusFilter" value={selectedStatus} options={statusOptions}
+                            onchange={handleStatusChange} placeholder="All Statuses" variant="label-hidden">
+                        </lightning-combobox>
+                    </div> -->
+
+                    <!-- Clear Filter Action -->
+                    <div class="filter-item clear-item">
+                        <template if:true={hasActiveFilters}>
+                            <button class="clear-filters-btn" onclick={handleClearFilters} title="Reset all filters">
+                                <lightning-icon icon-name="utility:clear" size="xx-small"
+                                    class="slds-m-right_xx-small"></lightning-icon>
+                                Reset Filters
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =======================================================
+             Interactive KPI Metric Tiles
+        ======================================================== -->
+        <!-- <div class="kpi-grid-container"> -->
+        <!-- Open Requests -->
+        <!-- <div class={openCardClass} data-status="Open" onclick={handleKpiClick} role="button" tabindex="0"
+                title="Click to filter by Open Requests">
+                <div class="kpi-accent orange-accent"></div>
+                <div class="kpi-content">
+                    <div class="kpi-top">
+                        <span class="kpi-title">OPEN REQUESTS</span>
+                        <span class="kpi-badge badge-orange">Awaiting Plan</span>
+                    </div>
+                    <div class="kpi-value">{openCount}</div>
+                    <div class="kpi-hint">
+                        <template if:true={isOpenActive}>
+                            <span class="active-indicator">● Active Filter</span>
+                        </template>
+                        <template if:false={isOpenActive}>
+                            <span class="inactive-hint">Click to filter</span>
+                        </template>
+                    </div>
+                </div>
+            </div> -->
+
+        <!-- Included In OA -->
+        <!-- <div class={oaCardClass} data-status="Included In OA" onclick={handleKpiClick} role="button" tabindex="0"
+                title="Click to filter by Included In OA">
+                <div class="kpi-accent green-accent"></div>
+                <div class="kpi-content">
+                    <div class="kpi-top">
+                        <span class="kpi-title">INCLUDED IN OA</span>
+                        <span class="kpi-badge badge-green">Planned</span>
+                    </div>
+                    <div class="kpi-value">{oaCount}</div>
+                    <div class="kpi-hint">
+                        <template if:true={isOaActive}>
+                            <span class="active-indicator">● Active Filter</span>
+                        </template>
+                        <template if:false={isOaActive}>
+                            <span class="inactive-hint">Click to filter</span>
+                        </template>
+                    </div>
+                </div>
+            </div> -->
+
+        <!-- Partially Received -->
+        <!-- <div class={partialCardClass} data-status="Partially Received" onclick={handleKpiClick} role="button"
+                tabindex="0" title="Click to filter by Partially Received">
+                <div class="kpi-accent blue-accent"></div>
+                <div class="kpi-content">
+                    <div class="kpi-top">
+                        <span class="kpi-title">PARTIAL RECEIVED</span>
+                        <span class="kpi-badge badge-blue">In Transit</span>
+                    </div>
+                    <div class="kpi-value">{partiallyReceivedCount}</div>
+                    <div class="kpi-hint">
+                        <template if:true={isPartialActive}>
+                            <span class="active-indicator">● Active Filter</span>
+                        </template>
+                        <template if:false={isPartialActive}>
+                            <span class="inactive-hint">Click to filter</span>
+                        </template>
+                    </div>
+                </div>
+            </div> -->
+
+        <!-- Received -->
+        <!-- <div class={receivedCardClass} data-status="Received" onclick={handleKpiClick} role="button" tabindex="0"
+                title="Click to filter by Received">
+                <div class="kpi-accent teal-accent"></div>
+                <div class="kpi-content">
+                    <div class="kpi-top">
+                        <span class="kpi-title">RECEIVED</span>
+                        <span class="kpi-badge badge-teal">Stocked</span>
+                    </div>
+                    <div class="kpi-value">{receivedCount}</div>
+                    <div class="kpi-hint">
+                        <template if:true={isReceivedActive}>
+                            <span class="active-indicator">● Active Filter</span>
+                        </template>
+                        <template if:false={isReceivedActive}>
+                            <span class="inactive-hint">Click to filter</span>
+                        </template>
+                    </div>
+                </div>
+            </div> -->
+
+        <!-- Completed -->
+        <!-- <div class={completedCardClass} data-status="Completed" onclick={handleKpiClick} role="button" tabindex="0"
+                title="Click to filter by Completed">
+                <div class="kpi-accent purple-accent"></div>
+                <div class="kpi-content">
+                    <div class="kpi-top">
+                        <span class="kpi-title">COMPLETED</span>
+                        <span class="kpi-badge badge-purple">Fulfilled</span>
+                    </div>
+                    <div class="kpi-value">{completedCount}</div>
+                    <div class="kpi-hint">
+                        <template if:true={isCompletedActive}>
+                            <span class="active-indicator">● Active Filter</span>
+                        </template>
+                        <template if:false={isCompletedActive}>
+                            <span class="inactive-hint">Click to filter</span>
+                        </template>
+                    </div>
+                </div>
+            </div> -->
+
+        <!-- Cancelled -->
+        <!-- <div class={cancelledCardClass} data-status="Cancelled" onclick={handleKpiClick} role="button" tabindex="0"
+                title="Click to filter by Cancelled">
+                <div class="kpi-accent red-accent"></div>
+                <div class="kpi-content">
+                    <div class="kpi-top">
+                        <span class="kpi-title">CANCELLED</span>
+                        <span class="kpi-badge badge-red">Closed</span>
+                    </div>
+                    <div class="kpi-value">{cancelledCount}</div>
+                    <div class="kpi-hint">
+                        <template if:true={isCancelledActive}>
+                            <span class="active-indicator">● Active Filter</span>
+                        </template>
+                        <template if:false={isCancelledActive}>
+                            <span class="inactive-hint">Click to filter</span>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div> -->
+
+        <!-- =======================================================
+             Selected Items Floating Action Banner
+        ======================================================== -->
+        <template if:true={hasSelection}>
+            <div class="selection-banner-card">
+                <div class="selection-banner-left">
+                    <div class="selection-pill">
+                        <lightning-icon icon-name="utility:check" size="xx-small" variant="inverse"
+                            class="selection-icon"></lightning-icon>
+                        <span class="selection-count-text"><strong>{selectedRequestCount}</strong> Requests
+                            Selected</span>
+                    </div>
+                    <div class="selection-stat-divider"></div>
+                    <div class="selection-stats">
+                        <span class="selection-stat-item">Total Qty: <strong>{formattedSelectedQty}</strong></span>
+                        <span class="selection-stat-bullet">•</span>
+                        <span class="selection-stat-item">Accounts: <strong>{selectedAccountCount}</strong></span>
+                    </div>
+                    <button class="clear-selection-link" onclick={handleClearSelection}>Deselect All</button>
+                </div>
+                <div class="selection-banner-right">
+                    <button class="confirm-plan-btn" onclick={confirmPlan} disabled={isSaving}>
+                        <lightning-icon icon-name="utility:approval" size="x-small" variant="inverse"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        Confirm Plan into OA
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <!-- =======================================================
+             Custom Supply Requests Table & Pagination Card
+        ======================================================== -->
+        <div class="table-card">
+            <!-- Table Header Bar -->
+            <div class="table-card-header">
+                <div class="table-title-section">
+                    <lightning-icon icon-name="utility:table" size="small" class="table-icon"></lightning-icon>
+                    <h2 class="table-card-heading">Supply Requests</h2>
+                    <span class="record-count-chip">{filteredCount} of {totalRequestsCount} Records</span>
+                </div>
+                <div class="table-header-tips">
+                    <span class="table-tip-text">Select requests to plan into Order Allocations</span>
+                </div>
+            </div>
+
+            <!-- Custom Table -->
+            <template if:true={hasRecords}>
+                <div class="custom-table-container">
+                    <table class="custom-planner-table">
+                        <thead>
+                            <tr>
+                                <th class="col-checkbox">
+                                    <label class="custom-checkbox-container">
+                                        <input type="checkbox" checked={isAllPageSelected}
+                                            onchange={handleSelectAllPage} />
+                                        <span class="checkmark"></span>
+                                    </label>
+                                </th>
+                                <th class="col-sortable" data-field="supplyRequestName" onclick={handleSortColumn}>
+                                    <div class="th-content">
+                                        <span>Supply Request</span>
+                                        <span class="sort-glyph">{sortIconSupplyRequest}</span>
+                                    </div>
+                                </th>
+                                <th class="col-sortable" data-field="itemName" onclick={handleSortColumn}>
+                                    <div class="th-content">
+                                        <span>Product</span>
+                                        <span class="sort-glyph">{sortIconProduct}</span>
+                                    </div>
+                                </th>
+                                <th class="col-sortable" data-field="requestingAccountName" onclick={handleSortColumn}>
+                                    <div class="th-content">
+                                        <span>Account</span>
+                                        <span class="sort-glyph">{sortIconAccount}</span>
+                                    </div>
+                                </th>
+                                <th class="col-sortable col-num" data-field="requestedQty" onclick={handleSortColumn}>
+                                    <div class="th-content th-right">
+                                        <span>Qty</span>
+                                        <span class="sort-glyph">{sortIconQty}</span>
+                                    </div>
+                                </th>
+                                <th class="col-sortable" data-field="requiredDate" onclick={handleSortColumn}>
+                                    <div class="th-content">
+                                        <span>Required Date</span>
+                                        <span class="sort-glyph">{sortIconDate}</span>
+                                    </div>
+                                </th>
+                                <th class="col-sortable col-status" data-field="status" onclick={handleSortColumn}>
+                                    <div class="th-content">
+                                        <span>Status</span>
+                                        <span class="sort-glyph">{sortIconStatus}</span>
+                                    </div>
+                                </th>
+                                <th class="col-actions">
+                                    <div class="th-content th-center">
+                                        <span>Stock Info</span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={pagedRequests} for:item="row">
+                                <tr key={row.supplyRequestId} class={row.rowClass}>
+                                    <td class="col-checkbox">
+                                        <label class="custom-checkbox-container">
+                                            <input type="checkbox" data-id={row.supplyRequestId}
+                                                checked={row.isSelected} onchange={handleRowCheckboxChange} />
+                                            <span class="checkmark"></span>
+                                        </label>
+                                    </td>
+                                    <td class="col-sr">
+                                        <a href={row.recordUrl} target="_blank" class="sr-record-link"
+                                            title="Open Supply Request Record">
+                                            <lightning-icon icon-name="utility:open" size="xx-small"
+                                                class="link-icon"></lightning-icon>
+                                            {row.supplyRequestName}
+                                        </a>
+                                    </td>
+                                    <td class="col-product">
+                                        <span class="product-name-text" title={row.itemName}>{row.itemName}</span>
+                                    </td>
+                                    <td class="col-account">
+                                        <span class="account-name-badge">
+                                            <lightning-icon icon-name="utility:company" size="xx-small"
+                                                class="account-icon"></lightning-icon>
+                                            {row.requestingAccountName}
+                                        </span>
+                                    </td>
+                                    <td class="col-qty col-num">
+                                        <span class="qty-pill">{row.formattedQty}</span>
+                                    </td>
+                                    <td class="col-date">
+                                        <span class="date-text">{row.formattedDate}</span>
+                                    </td>
+                                    <td class="col-status">
+                                        <span class={row.statusBadgeClass}>{row.status}</span>
+                                    </td>
+                                    <td class="col-actions">
+                                        <button class="view-stock-btn" data-id={row.supplyRequestId}
+                                            onclick={handleOpenStockModal}
+                                            title="View Current Location & Retailer Available Stock">
+                                            <lightning-icon icon-name="utility:preview" size="xx-small"
+                                                class="stock-btn-icon"></lightning-icon>
+                                            <span>See Stock</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Generic Pagination Integration -->
+                <div class="pagination-footer-wrapper">
+                    <c-generic-pagination total-records={filteredCount} page-size={pageSize} current-page={currentPage}
+                        show-page-size-selector={showPageSizeSelector} onpagechange={handlePageChange}>
+                    </c-generic-pagination>
+                </div>
+            </template>
+
+            <!-- Empty State -->
+            <template if:false={hasRecords}>
+                <div class="empty-state-container">
+                    <div class="empty-state-icon">
+                        <lightning-icon icon-name="utility:search" size="large" variant="neutral"></lightning-icon>
+                    </div>
+                    <h3 class="empty-state-title">No Supply Requests Found</h3>
+                    <p class="empty-state-subtitle">No records match your active search and filter criteria.</p>
+                    <button class="empty-state-btn" onclick={handleClearFilters}>
+                        Reset All Filters
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <!-- =======================================================
+             Created Order Allocations Result Popup Modal
+        ======================================================== -->
+        <template if:true={isResultModalOpen}>
+            <div class="modal-backdrop-blur"></div>
+            <div class="custom-modal-dialog" role="dialog" aria-modal="true">
+                <div class="modal-card">
+                    <!-- Modal Header Accent -->
+                    <div class="modal-accent-bar"></div>
+
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <div class="modal-header-left">
+                            <div class="modal-icon-container">
+                                <lightning-icon icon-name="utility:success" size="small"
+                                    variant="inverse"></lightning-icon>
+                            </div>
+                            <div class="modal-header-titles">
+                                <h2 class="modal-title">Order Allocation Created</h2>
+                                <p class="modal-subtitle">
+                                    Successfully generated <strong>{createdOACount}</strong> Order Allocation(s) ready
+                                    for planning.
+                                </p>
+                            </div>
+                        </div>
+                        <button class="modal-close-icon-btn" onclick={handleCloseModal} title="Close Modal">✕</button>
+                    </div>
+
+                    <!-- Modal Body: Cards List of Created OAs -->
+                    <div class="modal-body">
+                        <div class="oa-cards-grid">
+                            <template for:each={createdOAs} for:item="oa">
+                                <div key={oa.id} class="created-oa-card">
+                                    <div class="oa-card-left">
+                                        <div class="oa-header-line">
+                                            <span class="oa-badge-label">ORDER ALLOCATION</span>
+                                            <span class="oa-record-name">{oa.name}</span>
+                                            <span class="oa-status-tag">{oa.status}</span>
+                                        </div>
+                                        <div class="oa-details-grid">
+                                            <div class="oa-detail-item">
+                                                <lightning-icon icon-name="utility:company" size="xx-small"
+                                                    class="detail-icon"></lightning-icon>
+                                                <span class="detail-label">Account:</span>
+                                                <span class="detail-value">{oa.requestingAccountName}</span>
+                                            </div>
+                                            <template if:true={oa.supplyingAccountName}>
+                                                <div class="oa-detail-item">
+                                                    <lightning-icon icon-name="utility:travel_and_places"
+                                                        size="xx-small" class="detail-icon"></lightning-icon>
+                                                    <span class="detail-label">Supplier:</span>
+                                                    <span class="detail-value">{oa.supplyingAccountName}</span>
+                                                </div>
+                                            </template>
+                                            <div class="oa-detail-item">
+                                                <lightning-icon icon-name="utility:archive" size="xx-small"
+                                                    class="detail-icon"></lightning-icon>
+                                                <span class="detail-label">Lines / Qty:</span>
+                                                <span class="detail-value"><strong>{oa.lineItemCount}</strong> Items
+                                                    (Total Qty: <strong>{oa.formattedTotalQty}</strong>)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="oa-card-right">
+                                        <button class="open-planner-btn" data-id={oa.id} data-name={oa.name}
+                                            data-url={oa.plannerUrl} onclick={handleOpenPlanner}
+                                            title="Open Sales Allocation Planner in a new window">
+                                            <lightning-icon icon-name="utility:new_window" size="xx-small"
+                                                variant="inverse" class="slds-m-right_x-small"></lightning-icon>
+                                            Go to Planner
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="modal-footer">
+                        <div class="modal-footer-left">
+                            <template if:true={hasMultipleOAs}>
+                                <button class="modal-open-all-btn" onclick={handleOpenAllPlanners}>
+                                    <lightning-icon icon-name="utility:open_folder" size="xx-small"
+                                        class="slds-m-right_xx-small"></lightning-icon>
+                                    Open All in Planner
+                                </button>
+                            </template>
+                        </div>
+                        <div class="modal-footer-right">
+                            <button class="modal-close-btn" onclick={handleCloseModal}>
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- =======================================================
+             Stock Availability Detail Popup Modal
+        ======================================================== -->
+        <!-- =======================================================
+             Stock Availability Detail Popup Modal
+        ======================================================== -->
+        <template if:true={isStockModalOpen}>
+            <div class="modal-backdrop-blur" onclick={handleCloseStockModal}></div>
+            <div class="custom-modal-dialog stock-modal-dialog" role="dialog" aria-modal="true">
+                <div class="modal-card">
+                    <!-- Modal Header Accent -->
+                    <div class="modal-accent-bar stock-accent-bar"></div>
+
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <div class="modal-header-left">
+                            <div class="modal-icon-container stock-icon-wrapper">
+                                <lightning-icon icon-name="utility:database" size="small"
+                                    variant="inverse"></lightning-icon>
+                            </div>
+                            <div class="modal-header-titles">
+                                <h2 class="modal-title">Stock Availability Details</h2>
+                                <p class="modal-subtitle">
+                                    Product: <strong>{stockDetails.requestInfo.product}</strong> &nbsp;•&nbsp; Request:
+                                    <strong>{stockDetails.requestInfo.supplyRequestName}</strong>
+                                </p>
+                            </div>
+                        </div>
+                        <button class="modal-close-icon-btn" onclick={handleCloseStockModal}
+                            title="Close Modal">✕</button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="modal-body stock-modal-body">
+                        <!-- Loading Spinner inside modal -->
+                        <template if:true={isStockLoading}>
+                            <div class="modal-loading-wrapper">
+                                <lightning-spinner alternative-text="Loading Stock Details"
+                                    size="medium"></lightning-spinner>
+                            </div>
+                        </template>
+
+                        <template if:false={isStockLoading}>
+                            <!-- SECTION 1: REQUEST INFORMATION -->
+                            <div class="stock-section-card request-info-card">
+                                <div class="section-card-header">
+                                    <lightning-icon icon-name="standard:survey" size="x-small"
+                                        class="section-header-icon"></lightning-icon>
+                                    <h3 class="section-card-title">Request Information</h3>
+                                </div>
+                                <div class="request-info-grid">
+                                    <div class="info-cell">
+                                        <span class="info-cell-label">Product</span>
+                                        <span
+                                            class="info-cell-value product-val">{stockDetails.requestInfo.product}</span>
+                                    </div>
+                                    <div class="info-cell">
+                                        <span class="info-cell-label">Supply Request</span>
+                                        <span
+                                            class="info-cell-value sr-val">{stockDetails.requestInfo.supplyRequestName}</span>
+                                    </div>
+                                    <div class="info-cell">
+                                        <span class="info-cell-label">Requesting Account</span>
+                                        <div class="account-with-badge">
+                                            <span
+                                                class="info-cell-value acc-val">{stockDetails.requestInfo.requestingAccountName}</span>
+                                            <template if:true={stockDetails.requestInfo.requestingAccountType}>
+                                                <span
+                                                    class="type-badge badge-account-type">{stockDetails.requestInfo.requestingAccountType}</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    <div class="info-cell">
+                                        <span class="info-cell-label">Requested Quantity</span>
+                                        <span
+                                            class="info-cell-value qty-val">{stockDetails.requestInfo.formattedRequestedQty}</span>
+                                    </div>
+                                    <div class="info-cell">
+                                        <span class="info-cell-label">Required Date</span>
+                                        <span
+                                            class="info-cell-value date-val">{stockDetails.requestInfo.formattedRequiredDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION 2: ENTERPRISE VIEW INVENTORY -->
+                            <div class="stock-section-card available-stock-card">
+                                <div class="section-card-header">
+                                    <lightning-icon icon-name="standard:inventory" size="x-small"
+                                        class="section-header-icon"></lightning-icon>
+                                    <h3 class="section-card-title">Inventory across associated partners</h3>
+                                </div>
+
+                                <template if:true={hasAvailableStockList}>
+                                    <div class="stock-table-container">
+                                        <table class="custom-stock-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Stock-owning Account</th>
+                                                    <th>Account Type</th>
+                                                    <th>Inventory Location</th>
+                                                    <th class="col-num">Available Qty</th>
+                                                    <th class="col-num">On Hand Qty</th>
+                                                    <th class="col-num">Reserved Qty</th>
+                                                    <th class="col-num">In Transit</th>
+                                                    <th class="col-center">Stock Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={stockDetails.availableStockList}
+                                                    for:item="stockRow">
+                                                    <tr key={stockRow.locationId}>
+                                                        <td class="col-acc-owner">
+                                                            <span class="acc-owner-name">{stockRow.accountName}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="type-chip">{stockRow.accountType}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="location-name">{stockRow.locationName}</span>
+                                                        </td>
+                                                        <td class="col-num">
+                                                            <span
+                                                                class="qty-pill available-pill">{stockRow.formattedAvailableQty}</span>
+                                                        </td>
+                                                        <td class="col-num">
+                                                            <span
+                                                                class="qty-val-secondary">{stockRow.formattedOnHandQty}</span>
+                                                        </td>
+                                                        <td class="col-num">
+                                                            <span
+                                                                class="qty-val-secondary">{stockRow.formattedReservedQty}</span>
+                                                        </td>
+                                                        <td class="col-num">
+                                                            <span
+                                                                class="qty-val-secondary">{stockRow.formattedInTransitQty}</span>
+                                                        </td>
+                                                        <td class="col-center">
+                                                            <span
+                                                                class={stockRow.stockStatusBadgeClass}>{stockRow.stockStatus}</span>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </template>
+
+                                <template if:false={hasAvailableStockList}>
+                                    <div class="empty-stock-state">
+                                        <lightning-icon icon-name="utility:info" size="medium"
+                                            class="empty-stock-icon"></lightning-icon>
+                                        <p class="empty-stock-title">No inventory found for associated partners</p>
+                                        <p class="empty-stock-desc">No active inventory records exist for associated
+                                            partners.</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="modal-footer">
+                        <div class="modal-footer-left"></div>
+                        <div class="modal-footer-right">
+                            <button class="modal-close-btn" onclick={handleCloseStockModal}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+    </div>
+</template>

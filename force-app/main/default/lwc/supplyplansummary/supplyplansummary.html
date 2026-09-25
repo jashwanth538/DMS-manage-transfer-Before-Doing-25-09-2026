@@ -1,0 +1,133 @@
+<template>
+    <div class="summary-wrapper">
+        <!-- Spinner -->
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+        </template>
+        
+        <div class="summary-container">
+            <!-- Search Bar Block -->
+            <template if:false={recordId}>
+                <div class="slds-grid slds-gutters slds-m-bottom_medium slds-align-items-end">
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-input type="search" label="Supply Plan Number" value={searchTerm} onchange={handleSearchChange}></lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-button label="Search" variant="brand" onclick={handleSearchClick}></lightning-button>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={summaryData}>
+                <div class="card-box chart-container">
+                    <h3 class="slds-text-heading_small summary-title">Coverage Summary</h3>
+                    <div class="chart-flex">
+                        <!-- SVG Donut Chart -->
+                        <div class="donut-chart-wrapper">
+                            <svg viewBox="0 0 40 40" class="donut-chart">
+                                <!-- Background Circle -->
+                                <path class="donut-ring"
+                                    d="M20 4.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                
+                                <!-- Reserved Segment -->
+                                <path class="donut-segment segment-reserved"
+                                    stroke-dasharray={reservedDashArray}
+                                    d="M20 4.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                
+                                <!-- Transfer Segment -->
+                                <path class="donut-segment segment-transfer"
+                                    stroke-dasharray={transferDashArray}
+                                    stroke-dashoffset={transferDashOffset}
+                                    d="M20 4.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                
+                                <!-- Procurement Segment -->
+                                <path class="donut-segment segment-procurement"
+                                    stroke-dasharray={procurementDashArray}
+                                    stroke-dashoffset={procurementDashOffset}
+                                    d="M20 4.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+
+                                <!-- Reserved segment percentage text -->
+                                <template if:true={showReservedText}>
+                                    <text x={reservedTextX} y={reservedTextY} transform={reservedTextTransform} class="segment-text">{reservedPercentFormatted}%</text>
+                                </template>
+
+                                <!-- Transfer segment percentage text -->
+                                <template if:true={showTransferText}>
+                                    <text x={transferTextX} y={transferTextY} transform={transferTextTransform} class="segment-text">{transferPercentFormatted}%</text>
+                                </template>
+
+                                <!-- Procurement segment percentage text -->
+                                <template if:true={showProcurementText}>
+                                    <text x={procurementTextX} y={procurementTextY} transform={procurementTextTransform} class="segment-text">{procurementPercentFormatted}%</text>
+                                </template>
+                                
+                                <!-- Center Text -->
+                                <g class="donut-text">
+                                    <text x="20" y="19" class="donut-val" style={donutValStyle}>{totalRequiredFormatted}</text>
+                                    <text x="20" y="24" class="donut-label">Total Required</text>
+                                </g>
+                            </svg>
+                        </div>
+                        
+                        <!-- Legend Table Wrapper -->
+                        <div class="chart-legend table-card">
+                            <table class="summary-table">
+                                <thead>
+                                    <tr>
+                                        <th>Source Type</th>
+                                        <th>Qty</th>
+                                        <th>% of Required</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="source-cell">
+                                                <span class="legend-dot dot-reserved"></span>
+                                                <span>{reservedLabel}</span>
+                                            </div>
+                                        </td>
+                                        <td class="qty-val">{reservedQtyFormatted}</td>
+                                        <td class="pct-val">{reservedPercentFormatted}%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="source-cell">
+                                                <span class="legend-dot dot-transfer"></span>
+                                                <span>{transferLabel}</span>
+                                            </div>
+                                        </td>
+                                        <td class="qty-val">{transferQtyFormatted}</td>
+                                        <td class="pct-val">{transferPercentFormatted}%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="source-cell">
+                                                <span class="legend-dot dot-procurement"></span>
+                                                <span>Procurement</span>
+                                            </div>
+                                        </td>
+                                        <td class="qty-val">{procurementQtyFormatted}</td>
+                                        <td class="pct-val">{procurementPercentFormatted}%</td>
+                                    </tr>
+                                    <tr class="total-row font-weight-bold">
+                                        <td>Total Covered</td>
+                                        <td class="qty-val">{totalCoveredFormatted}</td>
+                                        <td class="pct-val">{totalCoveredPercentFormatted}%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            
+            <template if:true={error}>
+                <div class="slds-notify slds-notify_alert slds-alert_error" role="alert">
+                    <h2>{error}</h2>
+                </div>
+            </template>
+            
+        </div>
+    </div>
+</template>

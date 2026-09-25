@@ -1,0 +1,290 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.summary-wrapper,
+.summary-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+}
+
+.container {
+    background: #f3f3f3;
+    border-radius: 8px;
+}
+
+.card-box {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.chart-flex {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 3rem;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .chart-flex {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+}
+
+.summary-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1.25rem;
+}
+
+/* Donut Chart SVG CSS */
+.donut-chart-wrapper {
+    width: 220px;
+    height: 220px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.donut-chart {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.donut-ring {
+    fill: transparent;
+    stroke: #e6e6e6;
+    stroke-width: 5.2;
+}
+
+.donut-segment {
+    fill: transparent;
+    stroke-width: 5.2;
+    transition: stroke-dasharray 0.5s ease-out, stroke-dashoffset 0.5s ease-out;
+}
+
+.segment-reserved {
+    stroke: #2e844a; /* Green */
+}
+
+.segment-transfer {
+    stroke: #0070d2; /* Blue */
+}
+
+.segment-procurement {
+    stroke: #b131e5; /* Purple */
+}
+
+.segment-text {
+    font-size: 2px;
+    font-weight: 800;
+    fill: #ffffff;
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+
+.donut-text {
+    /* No rotation needed since SVG canvas is not rotated */
+}
+
+.donut-val {
+    font-size: 7.2px;
+    font-weight: 800;
+    fill: #0f172a;
+    text-anchor: middle;
+}
+
+.donut-label {
+    font-size: 2px;
+    fill: #64748b;
+    text-anchor: middle;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+/* Legend Table Card styling */
+.table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-grow: 1;
+    max-width: 460px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.summary-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.summary-table td {
+    padding: 11px 14px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.source-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dot-reserved { background-color: #2e844a; }
+.dot-transfer { background-color: #0070d2; }
+.dot-procurement { background-color: #b131e5; }
+
+.summary-table th:nth-child(2),
+.summary-table td:nth-child(2),
+.summary-table th:nth-child(3),
+.summary-table td:nth-child(3) {
+    text-align: right;
+}
+
+.qty-val, .pct-val {
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.total-row td {
+    font-weight: 700;
+    color: #0f172a;
+    border-top: 1.5px solid #e2e8f0;
+    border-bottom: none;
+    background-color: #f8fafc;
+}
+
+/* Stat Cards */
+.stat-card {
+    padding: 16px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #eee;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+
+.stat-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.stat-subtitle {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+/* Card Specific Colors (Glassmorphism/Pastel vibe) */
+.card-reserved {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.card-transfer {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e3a8a;
+}
+
+.card-procurement {
+    background-color: #faf5ff;
+    border-color: #e9d5ff;
+    color: #6b21a8;
+}
+
+.card-total {
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Table Badges */
+.badge-reservation {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+}
+
+.badge-transfer {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+}
+
+.badge-procurement {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #faf5ff;
+    border: 1px solid #e9d5ff;
+    color: #6b21a8;
+}
+
+.action-icon {
+    cursor: pointer;
+    --sds-c-icon-color-foreground-default: #ef4444;
+}
+.action-icon:hover {
+    --sds-c-icon-color-foreground-default: #b91c1c;
+}

@@ -1,0 +1,30 @@
+.sort-header-container {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+
+.sort-header-container:hover {
+    color: #0176d3;
+}
+
+.sort-header-container.sorted {
+    font-weight: 700;
+    color: #0176d3;
+}
+
+.sort-icon {
+    --slds-c-icon-color-foreground-default: currentColor;
+    display: inline-flex;
+    align-items: center;
+}
+
+.sort-icon-inactive {
+    opacity: 0.35;
+}
+
+.sort-header-container:hover .sort-icon-inactive {
+    opacity: 0.85;
+}

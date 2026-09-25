@@ -1,0 +1,225 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.supply-planning-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+}
+
+/* Custom fonts & weight */
+.font-weight-bold {
+    font-weight: 700 !important;
+}
+
+.coverage-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    min-width: 36px;
+    display: inline-block;
+}
+
+/* Link Styling */
+.link-styled {
+    color: #0b57d0;
+    text-decoration: none;
+    transition: color 0.15s ease;
+    font-size: 0.8rem;
+}
+
+.link-styled:hover {
+    color: #003da5;
+    text-decoration: underline;
+}
+
+/* Badges */
+.badge-custom {
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.badge-warning {
+    background-color: #fef9c3;
+    color: #a16207;
+}
+
+.badge-info {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.badge-neutral {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Line Items Table & Card Styles */
+.line-items-card {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: space-between;
+}
+
+.section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #4b5563;
+    letter-spacing: -0.01em;
+    font-family: inherit;
+}
+
+.table-custom {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.table-custom th {
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 10px 8px;
+}
+
+.table-custom td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+.table-custom tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-custom tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.table-custom tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.table-header {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.progress-bar-container {
+    height: 8px !important;
+    border-radius: 6px !important;
+    background-color: #e2e8f0 !important;
+    overflow: hidden;
+    width: 120px;
+}
+
+.progress-bar-success {
+    background-color: #16a34a !important;
+    height: 100%;
+    display: block;
+    border-radius: 6px;
+}
+
+.progress-bar-warning {
+    background-color: #ea580c !important;
+    height: 100%;
+    display: block;
+    border-radius: 6px;
+}
+
+.progress-bar-info {
+    background-color: #2563eb !important;
+    height: 100%;
+    display: block;
+    border-radius: 6px;
+}
+
+/* Horizontal Scroll Support when Planned */
+.planned-table {
+    min-width: 850px !important;
+}
+
+/* Qty Ratio Display Styling */
+.qty-ratio-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background-color: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.qty-received {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.qty-divider {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.qty-planned {
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Custom Scrollbar for Horizontal Scroll */
+.slds-scrollable_x::-webkit-scrollbar {
+    height: 8px;
+}
+
+.slds-scrollable_x::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.slds-scrollable_x::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.slds-scrollable_x::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}

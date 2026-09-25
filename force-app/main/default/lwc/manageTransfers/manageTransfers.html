@@ -1,0 +1,152 @@
+<template>
+  <div class="dashboard-wrapper">
+
+    <!-- ═══════════════════════════════════════════════════════
+         Hero Filter Banner (Redesigned Custom Card)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="filter-card">
+      <!-- Blue left vertical accent line -->
+      <div class="accent-line"></div>
+
+      <div class="filter-card-content">
+        <!-- Left Side: Headings -->
+        <div class="header-text-section">
+          <div class="title-and-badges">
+            <h1 class="card-title">Manage inventory transfers</h1>
+            
+            <!-- Badges/Chips -->
+            <div class="badge-group">
+              <span class="badge badge-pending">Pending Initiation</span>
+              <span class="badge badge-transit">In-Transit Acceptance</span>
+            </div>
+          </div>
+          <!-- Subtitle -->
+          <p class="card-subtitle">
+            Search, filter, and process stock movements across locations
+          </p>
+        </div>
+
+        <!-- Right Side: Search and Filters -->
+        <div class="card-controls-row">
+          <!-- Search Input -->
+          <div class="search-wrapper">
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Search transfers, locations, order number..."
+              value={inputValue}
+              oninput={handleSearchChange}
+            />
+          </div>
+
+          <!-- Dropdown & Clear Filter container -->
+          <div class="combobox-wrapper">
+            <lightning-combobox
+              name="location"
+              value={selectedLocationId}
+              options={locationOptions}
+              onchange={handleLocationChange}
+              variant="label-hidden"
+              class="location-combobox"
+            ></lightning-combobox>
+          </div>
+
+          <!-- Request Type Dropdown -->
+          <div class="combobox-wrapper">
+            <lightning-combobox
+              name="requestType"
+              value={selectedRequestType}
+              options={requestTypeOptions}
+              onchange={handleRequestTypeChange}
+              variant="label-hidden"
+              class="request-type-combobox"
+            ></lightning-combobox>
+          </div>
+
+          <!-- Clear Filters Link -->
+          <button class="clear-filters-btn" onclick={handleClearFilters} disabled={isClearDisabled}>
+            <span class="clear-icon">✕</span> Clear filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Metrics Summary Bar (4 Cards)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="metrics-bar">
+      <!-- 1. Pending Initiation -->
+      <div class="metric-card metric-pending">
+        <div class="metric-accent"></div>
+        <div class="metric-content">
+          <span class="metric-label">PENDING INITIATION</span>
+          <span class="metric-value">{metrics.pendingCount}</span>
+          <span class="metric-subtext">Awaiting approval</span>
+        </div>
+      </div>
+
+      <!-- 2. In-Transit Acceptance -->
+      <div class="metric-card metric-transit">
+        <div class="metric-accent"></div>
+        <div class="metric-content">
+          <span class="metric-label">IN-TRANSIT ACCEPTANCE</span>
+          <span class="metric-value">{metrics.inTransitCount}</span>
+          <span class="metric-subtext">On the way</span>
+        </div>
+      </div>
+
+      <!-- 3. Total Qty Out-Transit -->
+      <div class="metric-card metric-completed">
+        <div class="metric-accent"></div>
+        <div class="metric-content">
+          <span class="metric-label">TOTAL QTY OUT-TRANSIT</span>
+          <span class="metric-value">{metrics.totalQtyOutTransit}</span>
+          <span class="metric-subtext">Units</span>
+        </div>
+      </div>
+
+      <!-- 4. Total Qty In-Transit -->
+      <div class="metric-card metric-total-qty">
+        <div class="metric-accent"></div>
+        <div class="metric-content">
+          <span class="metric-label">TOTAL QTY IN-TRANSIT</span>
+          <span class="metric-value">{metrics.totalQtyInTransit}</span>
+          <span class="metric-subtext">Units</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         Dashboard Panels Grid (Side-by-Side: Pending & Acceptance)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="slds-grid slds-wrap slds-gutters grid-container">
+
+      <!-- Pending Initiation Panel (Left Column) -->
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-m-bottom_medium flex-col">
+        <c-inventory-transfer-pending-pannel
+          class="full-height"
+          search-term={searchTerm}
+          selected-location-id={selectedLocationId}
+          selected-request-type={selectedRequestType}
+          oninitiated={handleTransferInitiated}
+          onrefreshed={handlePendingRefreshed}
+        >
+        </c-inventory-transfer-pending-pannel>
+      </div>
+
+      <!-- In Transit Acceptance Panel (Right Column) -->
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-m-bottom_medium flex-col">
+        <c-inventory-transfer-accpecting-pannel
+          class="full-height"
+          search-term={searchTerm}
+          selected-location-id={selectedLocationId}
+          selected-request-type={selectedRequestType}
+          onaccepted={handleTransferAccepted}
+          onrefreshed={handleAcceptingRefreshed}
+        >
+        </c-inventory-transfer-accpecting-pannel>
+      </div>
+
+    </div>
+  </div>
+</template>

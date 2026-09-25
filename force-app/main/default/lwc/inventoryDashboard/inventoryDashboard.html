@@ -1,0 +1,894 @@
+<template>
+    <div class="slds-card supply-planning-container fade-in slds-m-around_medium">
+        <!-- Dashboard Hero Header -->
+        <div class="header-banner slds-p-around_medium slds-m-bottom_medium">
+            <div class="slds-grid slds-grid_vertical-align-center slds-wrap">
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">
+                    <div class="slds-media slds-media_center">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="custom:custom62" size="large" class="header-icon"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <h1 class="header-title">Enterprise Inventory</h1>
+                            <p class="header-subtitle">Real-time stock levels, and inventory distribution across locations.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-text-align_right slds-m-top_small-only">
+                    <div class="header-actions-group">
+                        <button class={valuationToggleBtnClass} onclick={handleToggleValuationMetrics} title="Toggle Financial Valuation & Health Metrics">
+                            <lightning-icon icon-name="utility:money" size="x-small"></lightning-icon>
+                            <span>{valuationToggleLabel}</span>
+                        </button>
+                        <button class="action-btn" onclick={handleResetFilters}>
+                            <lightning-icon icon-name="utility:refresh" size="x-small"></lightning-icon>
+                            <span>Reset Views</span>
+                        </button>
+                        <button class="action-btn-primary" onclick={handleRefreshData}>
+                            <lightning-icon icon-name="utility:sync" size="x-small" class="icon-primary-btn"></lightning-icon>
+                            <span>Sync Data</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Valuation & Stock Health Metrics Section (Toggled) -->
+        <template if:true={showValuationMetrics}>
+            <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-m-bottom_medium valuation-section-fade">
+                <!-- User Valuation Card -->
+                <div class={valuationCardColumnClass}>
+                    <div class="dashboard-kpi-card card-gradient-emerald-user">
+                        <div class="kpi-content">
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <span class="kpi-label slds-m-right_xx-small">{valuationCardTitle}</span>
+                                <div class="custom-tooltip-wrapper">
+                                    <button type="button" class="tooltip-icon-btn" aria-label="Valuation Info">
+                                        <lightning-icon icon-name="utility:info" size="xx-small" class="help-info-icon"></lightning-icon>
+                                    </button>
+                                    <div class="custom-tooltip-popover">
+                                        <div class="tooltip-arrow"></div>
+                                        <div class="tooltip-content">
+                                            <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-inner-icon slds-m-right_xx-small"></lightning-icon>
+                                            <span>Financial valuation of physical On-Hand stock belonging directly to your account &amp; assigned locations (Qty × Unit Price in ₹).</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="kpi-value">{kpiStats.formattedUserValuation}</span>
+                            <span class="kpi-micro-note">Your Locations ({kpiStats.userTotalOnHand} units)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Stock Health Card -->
+                <div class={valuationCardColumnClass}>
+                    <div class="dashboard-kpi-card card-gradient-cyan-user">
+                        <div class="kpi-content">
+                            <span class="kpi-label">{stockHealthCardTitle}</span>
+                            <div class="slds-grid slds-grid_vertical-align-center slds-m-top_xx-small">
+                                <span class="kpi-value slds-m-right_small">{kpiStats.userHealthScore}%</span>
+                                <span class={kpiStats.userHealthClass}>{kpiStats.userHealthLabel}</span>
+                            </div>
+                            <span class="kpi-micro-note">Your direct SKUs &gt; Safety Threshold</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Valuation & Health Cards (Only shown for non-Retailers who have partner networks) -->
+                <template if:true={showNetworkValuationMetrics}>
+                    <!-- Network Inventory Valuation Card -->
+                    <div class={valuationCardColumnClass}>
+                        <div class="dashboard-kpi-card card-gradient-emerald">
+                            <div class="kpi-content">
+                                <div class="slds-grid slds-grid_vertical-align-center">
+                                    <span class="kpi-label slds-m-right_xx-small">Network Valuation (On Hand)</span>
+                                    <!-- Custom Popover Tooltip for Valuation -->
+                                    <div class="custom-tooltip-wrapper">
+                                        <button type="button" class="tooltip-icon-btn" aria-label="Network Valuation Info">
+                                            <lightning-icon icon-name="utility:info" size="xx-small" class="help-info-icon"></lightning-icon>
+                                        </button>
+                                        <div class="custom-tooltip-popover">
+                                            <div class="tooltip-arrow"></div>
+                                            <div class="tooltip-content">
+                                                <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-inner-icon slds-m-right_xx-small"></lightning-icon>
+                                                <span>Represents the total financial valuation of all physical On-Hand stock (On-Hand Qty × Active Unit Price in ₹) across your selected partner network and locations.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="kpi-value">{kpiStats.formattedTotalValuation}</span>
+                                <span class="kpi-micro-note">Calculated across selected network</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network Stock Health Score Card -->
+                    <div class={valuationCardColumnClass}>
+                        <div class="dashboard-kpi-card card-gradient-cyan">
+                            <div class="kpi-content">
+                                <span class="kpi-label">Network Stock Health</span>
+                                <div class="slds-grid slds-grid_vertical-align-center slds-m-top_xx-small">
+                                    <span class="kpi-value slds-m-right_small">{kpiStats.healthScore}%</span>
+                                    <span class={kpiStats.healthClass}>{kpiStats.healthLabel}</span>
+                                </div>
+                                <span class="kpi-micro-note">Network SKUs &gt; Safety Threshold</span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Standard Inventory Quantity KPI Cards Section -->
+        <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-m-bottom_medium">
+            <!-- Total On Hand Card -->
+            <div class="slds-col slds-size_1-of-2 slds-small-size_1-of-3 slds-large-size_1-of-6 slds-m-bottom_small">
+                <div class="dashboard-kpi-card card-gradient-blue">
+                    <div class="kpi-content">
+                        <span class="kpi-label" title="Total Stock On Hand">Total Stock On Hand</span>
+                        <span class="kpi-value">{kpiStats.totalOnHand}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Available Card -->
+            <div class="slds-col slds-size_1-of-2 slds-small-size_1-of-3 slds-large-size_1-of-6 slds-m-bottom_small">
+                <div class="dashboard-kpi-card card-gradient-green">
+                    <div class="kpi-content">
+                        <span class="kpi-label" title="Total Available Stock">Total Available Stock</span>
+                        <span class="kpi-value">{kpiStats.totalAvailable}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Reserved - Sale Order Card -->
+            <div class="slds-col slds-size_1-of-2 slds-small-size_1-of-3 slds-large-size_1-of-6 slds-m-bottom_small">
+                <div class="dashboard-kpi-card card-gradient-purple">
+                    <div class="kpi-content">
+                        <span class="kpi-label" title="Total Reserved - Sale Order">Total Reserved - SO</span>
+                        <span class="kpi-value">{kpiStats.totalReservedSaleOrder}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Damaged Card -->
+            <div class="slds-col slds-size_1-of-2 slds-small-size_1-of-3 slds-large-size_1-of-6 slds-m-bottom_small">
+                <div class="dashboard-kpi-card card-gradient-red">
+                    <div class="kpi-content">
+                        <span class="kpi-label" title="Total Damaged Stock">Total Damaged Stock</span>
+                        <span class="kpi-value">{kpiStats.totalDamaged}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Transit IN Card -->
+            <div class="slds-col slds-size_1-of-2 slds-small-size_1-of-3 slds-large-size_1-of-6 slds-m-bottom_small">
+                <div class="dashboard-kpi-card card-gradient-teal">
+                    <div class="kpi-content">
+                        <span class="kpi-label" title="Total Transit IN">Total Transit IN</span>
+                        <span class="kpi-value">{kpiStats.totalTransitIn}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Transit OUT Card -->
+            <div class="slds-col slds-size_1-of-2 slds-small-size_1-of-3 slds-large-size_1-of-6 slds-m-bottom_small">
+                <div class="dashboard-kpi-card card-gradient-orange">
+                    <div class="kpi-content">
+                        <span class="kpi-label" title="Total Transit OUT">Total Transit OUT</span>
+                        <span class="kpi-value">{kpiStats.totalTransitOut}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enterprise Hierarchy Navigation Bar (Hidden for Retailers or Single-Account Views) -->
+        <template if:true={showEnterpriseView}>
+            <div class="slds-m-horizontal_medium slds-m-bottom_medium hierarchy-nav-container">
+                <div class="hierarchy-card slds-p-horizontal_medium slds-p-vertical_small">
+                    <div class="slds-grid slds-wrap slds-grid_vertical-align-center slds-grid_align-spread">
+                        <!-- Left: Icon Card + Title/Subtitle + Custom Help Tooltip -->
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_7-of-12 slds-m-bottom_x-small-only">
+                            <div class="slds-grid slds-grid_vertical-align-center slds-wrap">
+                                <div class="enterprise-header-block slds-m-right_large">
+                                    <div class="enterprise-icon-card">
+                                        <lightning-icon icon-name="utility:company" size="small" class="enterprise-company-icon"></lightning-icon>
+                                    </div>
+                                    <div class="enterprise-text-meta">
+                                        <div class="enterprise-title-row">
+                                            <span class="enterprise-main-title">Enterprise View</span>
+                                            <!-- Custom Popover Tooltip UI -->
+                                            <div class="custom-tooltip-wrapper slds-m-left_xx-small">
+                                                <button type="button" class="tooltip-icon-btn" aria-label="Enterprise View Information">
+                                                    <lightning-icon icon-name="utility:info" size="xx-small" class="help-info-icon"></lightning-icon>
+                                                </button>
+                                                <div class="custom-tooltip-popover">
+                                                    <div class="tooltip-arrow"></div>
+                                                    <div class="tooltip-content">
+                                                        <lightning-icon icon-name="utility:info_alt" size="xx-small" class="tooltip-inner-icon slds-m-right_xx-small"></lightning-icon>
+                                                        <span>Enterprise view offers you to see the inventory of our associated partners.</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="enterprise-sub-text">View data across your organization</p>
+                                    </div>
+                                </div>
+
+                                <!-- Segmented Pill Controls -->
+                                <div class="segmented-tabs-wrapper">
+                                    <div class="segmented-tabs-track" role="tablist">
+                                        <template for:each={renderedTabs} for:item="tab">
+                                            <button 
+                                                key={tab.tabId} 
+                                                type="button"
+                                                role="tab"
+                                                class={tab.tabClass} 
+                                                data-id={tab.tabId} 
+                                                onclick={handleTabClick}>
+                                                <span class="tab-text">{tab.label}</span>
+                                                <template if:true={tab.count}>
+                                                    <span class="tab-badge">{tab.count}</span>
+                                                </template>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Dynamic Searchable Account Selector (Filtered to active category) -->
+                        <template if:true={showAccountDropdown}>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_5-of-12 slds-text-align_right">
+                                <div class="account-selector-box slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <div class="slds-combobox_container">
+                                            <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open">
+                                                <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+                                                    <input 
+                                                        type="text" 
+                                                        class="slds-input account-search-input font-weight-semibold" 
+                                                        placeholder={accountSearchPlaceholder}
+                                                        value={accountSearchTerm}
+                                                        oninput={handleAccountSearchInput}
+                                                        onfocus={handleAccountSearchFocus}
+                                                        onblur={handleAccountSearchBlur}
+                                                        aria-autocomplete="list"
+                                                        aria-expanded="true"
+                                                        aria-haspopup="listbox"
+                                                        role="combobox" />
+                                                    <template if:true={selectedAccountId}>
+                                                        <button class="slds-button slds-button_icon slds-input__icon slds-input__icon_right" title="Clear Account selection" onclick={handleClearAccountSelection}>
+                                                            <lightning-icon icon-name="utility:clear" size="x-small" class="slds-icon slds-icon_x-small slds-icon-text-default"></lightning-icon>
+                                                        </button>
+                                                    </template>
+                                                    <template if:false={selectedAccountId}>
+                                                        <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right">
+                                                            <lightning-icon icon-name="utility:search" size="x-small" class="slds-icon slds-icon_x-small slds-icon-text-default"></lightning-icon>
+                                                        </span>
+                                                    </template>
+                                                </div>
+
+                                                <!-- Search Dropdown List -->
+                                                <template if:true={isAccountDropdownOpen}>
+                                                    <div class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid account-dropdown-list" role="listbox">
+                                                        <ul class="slds-listbox slds-listbox_vertical" role="presentation">
+                                                            <!-- Option for All Accounts in Category -->
+                                                            <li role="presentation" class="slds-listbox__item" data-id="" onmousedown={handleSelectAccount}>
+                                                                <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small account-option-item">
+                                                                    <span class="slds-media__figure slds-listbox__option-icon">
+                                                                        <lightning-icon icon-name="standard:account" size="x-small"></lightning-icon>
+                                                                    </span>
+                                                                    <span class="slds-media__body">
+                                                                        <span class="slds-truncate font-weight-bold">
+                                                                            {selectedAccountLabel}
+                                                                        </span>
+                                                                    </span>
+                                                                </div>
+                                                            </li>
+                                                            <!-- Dynamic Filtered Account Options -->
+                                                            <template for:each={searchableAccountList} for:item="acc">
+                                                                <li key={acc.id} role="presentation" class="slds-listbox__item" data-id={acc.id} onmousedown={handleSelectAccount}>
+                                                                    <div class={acc.itemClass}>
+                                                                        <span class="slds-media__figure slds-listbox__option-icon">
+                                                                            <lightning-icon icon-name="standard:account" size="x-small"></lightning-icon>
+                                                                        </span>
+                                                                        <span class="slds-media__body">
+                                                                            <span class="slds-truncate font-weight-semibold">{acc.name}</span>
+                                                                            <template if:true={acc.recordTypeName}>
+                                                                                <span class="slds-text-color_weak slds-m-left_xx-small text-xs">({acc.recordTypeName})</span>
+                                                                            </template>
+                                                                        </span>
+                                                                    </div>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Filter & Search Controls Panel -->
+        <div class="slds-m-horizontal_medium slds-m-bottom_medium">
+            <div class="filter-panel slds-p-around_medium card-gradient-bg">
+                <div class="slds-grid slds-wrap slds-gutters slds-grid_vertical-align-end">
+                    <!-- Search by Item -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-m-bottom_small">
+                        <lightning-input 
+                            name="itemSearchInput" 
+                            label="Search by Item" 
+                            type="search" 
+                            placeholder="Search by Item Name/Code..." 
+                            value={searchKey}
+                            onchange={handleItemSearchChange}
+                            class="combobox-custom">
+                        </lightning-input>
+                    </div>
+
+                    <!-- Search by Location (Live table filter, no dropdown) -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-m-bottom_small">
+                        <lightning-input 
+                            name="locationSearchInput" 
+                            label="Search by Location" 
+                            type="search" 
+                            placeholder="Search by Location Name/Code..." 
+                            value={locationSearchKey}
+                            onchange={handleLocationSearchChange}
+                            class="combobox-custom">
+                        </lightning-input>
+                    </div>
+
+                    <!-- Stock Alert Level -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-m-bottom_small">
+                        <lightning-combobox 
+                            name="alertLevelSelector" 
+                            label="Stock Alert Level" 
+                            placeholder="All Levels" 
+                            value={selectedStatusFilter} 
+                            options={alertLevelOptions} 
+                            onchange={handleStatusFilterChange}
+                            class="combobox-custom">
+                        </lightning-combobox>
+                    </div>
+
+                    <!-- Clear Filters -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-m-bottom_small slds-text-align_right">
+                        <button class="slds-button slds-button_neutral reset-btn-custom slds-w-100" onclick={handleResetFilters} style="border-radius: 8px;">
+                            <lightning-icon icon-name="utility:refresh" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area / Datatable -->
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <!-- Spinner -->
+            <template if:true={isLoading}>
+                <div class="spinner-container slds-p-around_large">
+                    <lightning-spinner alternative-text="Loading inventory data..." size="medium" variant="brand"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- Table View -->
+            <template if:false={isLoading}>
+                <!-- Empty State -->
+                <template if:false={hasRecords}>
+                    <div class="empty-state-card slds-align_absolute-center slds-p-around_large slds-text-align_center">
+                        <div class="max-width-350">
+                            <lightning-icon icon-name="utility:search" size="large" class="empty-icon slds-m-bottom_small"></lightning-icon>
+                            <h3 class="slds-text-heading_medium font-weight-bold slds-m-bottom_x-small">No Inventory Records Found</h3>
+                            <p class="slds-text-color_weak slds-m-bottom_medium">We couldn't find any inventory records matching your query criteria. Try adjusting your search key, location, or stock level filters.</p>
+                            <p class="slds-m-top_small"><button class="slds-button slds-button_brand action-btn-primary" onclick={handleResetFilters}>Clear Filters</button></p>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Responsive Datatable -->
+                <template if:true={hasRecords}>
+                    <div class="table-container slds-m-bottom_medium">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <template for:each={columns} for:item="col">
+                                        <th key={col.fieldName} class={col.headerClass} scope="col">
+                                            <template if:true={col.sortable}>
+                                                <c-generic-sort-header 
+                                                    label={col.label} 
+                                                    column-name={col.fieldName} 
+                                                    current-sort-by={sortBy} 
+                                                    current-sort-direction={sortDirection} 
+                                                    onsort={handleSort}>
+                                                </c-generic-sort-header>
+                                            </template>
+                                            <template if:false={col.sortable}>
+                                                {col.label}
+                                            </template>
+                                        </th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={paginatedRecords} for:item="rec">
+                                    <tr key={rec.Id} class="table-row-hover">
+                                        <td class="font-weight-semibold">
+                                            <a href="javascript:void(0);" onclick={navigateToRecord} data-id={rec.Id} class="link-styled">
+                                                {rec.Name}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div class="slds-grid slds-grid_vertical">
+                                                <span class="font-weight-semibold text-slate-800">{rec.itemName}</span>
+                                                <span class="text-subtle slds-m-top_xx-small">Code: {rec.itemCode}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-grid slds-grid_vertical">
+                                                <span class="font-weight-semibold">{rec.locationName}</span>
+                                                <span class="text-subtle slds-m-top_xx-small">Code: {rec.locationCode}</span>
+                                            </div>
+                                        </td>
+                                        <td class="slds-text-align_right">
+                                            <span class={rec.availableClass}>{rec.availableQty}</span>
+                                        </td>
+                                        <td class="slds-text-align_right font-weight-semibold">{rec.onHandQty}</td>
+                                        <td class="slds-text-align_right">
+                                            <a href="javascript:void(0);" onclick={handleOpenDetailModal} data-id={rec.Id} data-type="saleOrder" class="link-styled font-weight-bold" title="Click to view Reserved Sale Orders">
+                                                {rec.reservedSaleOrderQty}
+                                            </a>
+                                        </td>
+                                        <td class="slds-text-align_right">
+                                            <span class={rec.damagedClass}>{rec.damagedQty}</span>
+                                        </td>
+                                        <td class="slds-text-align_center">
+                                            <div class="slds-grid slds-grid_align-center gap-xxs">
+                                                <a href="javascript:void(0);" onclick={handleOpenDetailModal} data-id={rec.Id} data-type="transitIn" class="no-underline" title="Click to view Transit In Orders">
+                                                    <span class="slds-badge badge-transit badge-transit-in badge-clickable">
+                                                        ↓ {rec.transitInQty}
+                                                    </span>
+                                                </a>
+                                                <a href="javascript:void(0);" onclick={handleOpenDetailModal} data-id={rec.Id} data-type="transitOut" class="no-underline" title="Click to view Transit Out Orders">
+                                                    <span class="slds-badge badge-transit badge-transit-out badge-clickable">
+                                                        ↑ {rec.transitOutQty}
+                                                    </span>
+                                                </a>
+                                            </div>
+                                        </td>
+                                        <td class="slds-text-align_center">
+                                            <span class={rec.statusClass}>{rec.statusLabel}</span>
+                                        </td>
+                                        <td class="slds-text-align_center">
+                                            <div class="slds-grid slds-grid_align-center gap-xxs">
+                                                <button 
+                                                    class="slds-button slds-button_icon slds-button_icon-border-filled action-icon-btn action-icon-btn-valuation" 
+                                                    title="View Item Valuation Breakdown" 
+                                                    onclick={handleOpenValuationModal} 
+                                                    data-id={rec.Id}>
+                                                    <lightning-icon icon-name="utility:money" size="x-small"></lightning-icon>
+                                                </button>
+                                                <button 
+                                                    class="slds-button slds-button_icon slds-button_icon-border-filled action-icon-btn" 
+                                                    title="Adjust Inventory Stock" 
+                                                    onclick={handleOpenAdjustModal} 
+                                                    data-id={rec.Id}>
+                                                    <lightning-icon icon-name="utility:edit" size="x-small"></lightning-icon>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Generic Pagination Component -->
+                    <div class="slds-m-top_small border-top-divider slds-p-top_small">
+                        <c-generic-pagination 
+                            total-records={totalRecordsCount} 
+                            current-page={pageNumber} 
+                            page-size={pageSize} 
+                            show-page-size-selector 
+                            onpagechange={handlePageChange}
+                            onpagesizechange={handlePageChange}
+                            onchange={handlePageChange}>
+                        </c-generic-pagination>
+                    </div>
+                </template>
+            </template>
+        </div>
+    </div>
+
+    <!-- Stock Adjustment Modal -->
+    <template if:true={isAdjustModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small custom-modal">
+            <div class="slds-modal__container modal-animation">
+                <!-- Modal Header -->
+                <header class="slds-modal__header modal-header-gradient">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseAdjustModal}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium font-weight-bold modal-header-title">Adjust Stock Quantities</h2>
+                    <p class="slds-m-top_xx-small modal-header-subtitle">Update inventory levels for {editRecord.itemName} at {editRecord.locationName}</p>
+                </header>
+                
+                <!-- Modal Body -->
+                <div class="slds-modal__content slds-p-around_large modal-body-bg">
+                    <!-- Quick Summary Cards inside modal -->
+                    <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="mini-kpi-card">
+                                <span class="mini-kpi-label">Current Available</span>
+                                <span class="mini-kpi-val text-green">{modalCalculatedAvailable}</span>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2">
+                            <div class="mini-kpi-card">
+                                <span class="mini-kpi-label">Current On Hand</span>
+                                <span class="mini-kpi-val">{editRecord.onHandQty}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <!-- On Hand Input -->
+                        <div class="slds-col slds-size_1-of-2 slds-m-bottom_small">
+                            <lightning-input 
+                                type="number" 
+                                name="onHandQty" 
+                                label="Stock On Hand" 
+                                value={editRecord.onHandQty} 
+                                onchange={handleModalFieldChange}
+                                read-only
+                                class="input-custom-modal">
+                            </lightning-input>
+                        </div>
+
+                        <!-- Damaged Input -->
+                        <div class="slds-col slds-size_1-of-2 slds-m-bottom_small">
+                            <lightning-input 
+                                type="number" 
+                                name="damagedQty" 
+                                label="Damaged Stock" 
+                                value={editRecord.damagedQty} 
+                                onchange={handleModalFieldChange}
+                                class="input-custom-modal">
+                            </lightning-input>
+                        </div>
+
+                        <!-- Available Input (Read-only auto-calculated or manual input) -->
+                        <div class="slds-col slds-size_1-of-2 slds-m-bottom_small">
+                            <lightning-input 
+                                type="number" 
+                                name="availableQty" 
+                                label="Available Quantity" 
+                                value={editRecord.availableQty} 
+                                onchange={handleModalFieldChange}
+                                class="input-custom-modal">
+                            </lightning-input>
+                        </div>
+
+                        <!-- Transit In Input -->
+                        <div class="slds-col slds-size_1-of-2 slds-m-bottom_small">
+                            <lightning-input 
+                                type="number" 
+                                name="transitInQty" 
+                                label="Transit In Quantity" 
+                                value={editRecord.transitInQty} 
+                                onchange={handleModalFieldChange}
+                                class="input-custom-modal">
+                            </lightning-input>
+                        </div>
+
+                        <!-- Transit Out Input -->
+                        <div class="slds-col slds-size_1-of-2 slds-m-bottom_small">
+                            <lightning-input 
+                                type="number" 
+                                name="transitOutQty" 
+                                label="Transit Out Quantity" 
+                                value={editRecord.transitOutQty} 
+                                onchange={handleModalFieldChange}
+                                class="input-custom-modal">
+                            </lightning-input>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <footer class="slds-modal__footer modal-footer-bg">
+                    <button class="slds-button slds-button_neutral modal-action-btn" onclick={handleCloseAdjustModal}>Cancel</button>
+                    <button class="slds-button slds-button_brand modal-action-btn-primary" onclick={handleSaveAdjustStock} disabled={isModalSaving}>
+                        <template if:true={isModalSaving}>
+                            <lightning-spinner alternative-text="Saving..." size="small" class="slds-m-right_x-small"></lightning-spinner>
+                        </template>
+                        Save Adjustments
+                    </button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <!-- Item Transfer Criteria Modal -->
+    <template if:true={isCriteriaModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium custom-modal">
+            <div class="slds-modal__container modal-animation">
+                <!-- Modal Header -->
+                <header class="slds-modal__header modal-header-gradient">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseCriteriaModal}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium font-weight-bold modal-header-title">Item Transfer Criteria</h2>
+                    <p class="slds-m-top_xx-small modal-header-subtitle">Transfer rules and thresholds defined for {selectedItemName}</p>
+                </header>
+                
+                <!-- Modal Body -->
+                <div class="slds-modal__content slds-p-around_large modal-body-bg">
+                    <!-- Loading Spinner -->
+                    <template if:true={criteriaLoading}>
+                        <div class="spinner-container slds-p-around_large">
+                            <lightning-spinner alternative-text="Loading transfer criteria..." size="medium" variant="brand"></lightning-spinner>
+                        </div>
+                    </template>
+
+                    <template if:false={criteriaLoading}>
+                        <!-- Empty State inside modal -->
+                        <template if:false={hasCriteriaRecords}>
+                            <div class="empty-state-card slds-align_absolute-center slds-p-around_large slds-text-align_center">
+                                <div class="max-width-350">
+                                    <lightning-icon icon-name="utility:info" size="large" class="empty-icon slds-m-bottom_small"></lightning-icon>
+                                    <h3 class="slds-text-heading_small font-weight-bold slds-m-bottom_x-small">No Transfer Criteria Found</h3>
+                                    <p class="slds-text-color_weak">There are no item transfer criteria records defined for this item in the system.</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Criteria Records Table -->
+                        <template if:true={hasCriteriaRecords}>
+                            <div class="table-container">
+                                <table class="table-custom">
+                                    <thead>
+                                        <tr>
+                                            <th class="table-header font-weight-semibold" scope="col">Ref</th>
+                                            <th class="table-header font-weight-semibold" scope="col">From Location</th>
+                                            <th class="table-header font-weight-semibold" scope="col">To Location</th>
+                                            <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Min Qty</th>
+                                            <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Max Qty</th>
+                                            <th class="table-header font-weight-semibold" scope="col">UOM</th>
+                                            <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Cost</th>
+                                            <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Time (hrs)</th>
+                                            <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Distance (km)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={criteriaRecords} for:item="crit">
+                                            <tr key={crit.Id} class="table-row-hover">
+                                                <td class="font-weight-semibold text-slate-800">{crit.Name}</td>
+                                                <td>{crit.fromSiteName}</td>
+                                                <td>{crit.toSiteName}</td>
+                                                <td class="slds-text-align_right">{crit.minQty}</td>
+                                                <td class="slds-text-align_right">{crit.maxQty}</td>
+                                                <td>{crit.uom}</td>
+                                                <td class="slds-text-align_right font-weight-semibold text-slate-800">{crit.cost}</td>
+                                                <td class="slds-text-align_right">{crit.time}</td>
+                                                <td class="slds-text-align_right">{crit.distance}</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+
+                <!-- Modal Footer -->
+                <footer class="slds-modal__footer modal-footer-bg">
+                    <button class="slds-button slds-button_neutral modal-action-btn" onclick={handleCloseCriteriaModal}>Close</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <!-- Allocation Detail Modal -->
+    <template if:true={isDetailModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large custom-modal">
+            <div class="slds-modal__container modal-animation">
+                <!-- Modal Header -->
+                <header class="slds-modal__header modal-header-gradient">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseDetailModal}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium font-weight-bold modal-header-title">{detailModalTitle}</h2>
+                    <p class="slds-m-top_xx-small modal-header-subtitle">Item: <strong>{detailModalItemName}</strong> • Location: <strong>{detailModalLocationName}</strong></p>
+                </header>
+                
+                <!-- Modal Body -->
+                <div class="slds-modal__content slds-p-around_large modal-body-bg">
+                    <!-- Loading Spinner -->
+                    <template if:true={isDetailModalLoading}>
+                        <div class="spinner-container slds-p-around_large">
+                            <lightning-spinner alternative-text="Loading details..." size="medium" variant="brand"></lightning-spinner>
+                        </div>
+                    </template>
+
+                    <template if:false={isDetailModalLoading}>
+                        <!-- Empty State -->
+                        <template if:false={hasDetailModalData}>
+                            <div class="empty-state-card slds-align_absolute-center slds-p-around_large slds-text-align_center">
+                                <div class="max-width-350">
+                                    <lightning-icon icon-name="utility:info" size="large" class="empty-icon slds-m-bottom_small"></lightning-icon>
+                                    <h3 class="slds-text-heading_small font-weight-bold slds-m-bottom_x-small">No Records Found</h3>
+                                    <p class="slds-text-color_weak">There are currently no matching records for this inventory allocation.</p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Data Content -->
+                        <template if:true={hasDetailModalData}>
+                            <!-- 1. SALE ORDERS TABLE -->
+                            <template if:true={isSaleOrderDetailModal}>
+                                <div class="table-container">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th class="table-header font-weight-semibold" scope="col">Reservation #</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Sale Order / Ref</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Customer / Account</th>
+                                                <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Reserved Qty</th>
+                                                <th class="table-header font-weight-semibold slds-text-align_center" scope="col">Status</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Reservation Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={detailModalData} for:item="item">
+                                                <tr key={item.reservationId} class="table-row-hover">
+                                                    <td class="font-weight-semibold">
+                                                        <a href="javascript:void(0);" data-id={item.reservationId} onclick={navigateToRecord} class="link-styled">{item.reservationName}</a>
+                                                    </td>
+                                                    <td>
+                                                        <template if:true={item.saleOrderId}>
+                                                            <a href="javascript:void(0);" data-id={item.saleOrderId} onclick={navigateToRecord} class="link-styled">{item.saleOrderNumber}</a>
+                                                        </template>
+                                                        <template if:false={item.saleOrderId}>
+                                                            <span>{item.saleOrderNumber}</span>
+                                                        </template>
+                                                    </td>
+                                                    <td><span>{item.accountName}</span></td>
+                                                    <td class="slds-text-align_right font-weight-bold text-green">{item.reservedQty}</td>
+                                                    <td class="slds-text-align_center">
+                                                        <span class="slds-badge badge-custom badge-success">{item.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <lightning-formatted-date-time value={item.reservationDate}></lightning-formatted-date-time>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+
+                            <!-- 2. TRANSFERS TABLE -->
+                            <template if:true={isTransferDetailModal}>
+                                <div class="table-container">
+                                    <table class="table-custom">
+                                        <thead>
+                                            <tr>
+                                                <th class="table-header font-weight-semibold" scope="col">Transfer #</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Item</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Source Location</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Destination Location</th>
+                                                <th class="table-header font-weight-semibold slds-text-align_right" scope="col">Transfer Qty</th>
+                                                <th class="table-header font-weight-semibold slds-text-align_center" scope="col">Status</th>
+                                                <th class="table-header font-weight-semibold" scope="col">Required Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={detailModalData} for:item="item">
+                                                <tr key={item.transferId} class="table-row-hover">
+                                                    <td class="font-weight-semibold">
+                                                        <a href="javascript:void(0);" data-id={item.transferId} onclick={navigateToRecord} class="link-styled">{item.transferName}</a>
+                                                    </td>
+                                                    <td><span>{item.itemName}</span></td>
+                                                    <td><span>{item.sourceLocationName}</span></td>
+                                                    <td><span>{item.destinationLocationName}</span></td>
+                                                    <td class="slds-text-align_right font-weight-bold text-green">{item.transferQty}</td>
+                                                    <td class="slds-text-align_center">
+                                                        <span class="slds-badge badge-custom badge-success">{item.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <lightning-formatted-date-time value={item.requiredDate}></lightning-formatted-date-time>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+
+                        </template>
+                    </template>
+                </div>
+
+                <!-- Modal Footer -->
+                <footer class="slds-modal__footer modal-footer-bg">
+                    <button class="slds-button slds-button_neutral modal-action-btn" onclick={handleCloseDetailModal}>Close</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <!-- Item Valuation Breakdown Modal -->
+    <template if:true={isValuationModalOpen}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small custom-modal">
+            <div class="slds-modal__container modal-animation">
+                <!-- Modal Header -->
+                <header class="slds-modal__header modal-header-gradient">
+                    <button class="slds-button slds-button_icon slds-modal__close" title="Close" onclick={handleCloseValuationModal}>
+                        <lightning-icon icon-name="utility:close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium font-weight-bold modal-header-title">Item Inventory Valuation</h2>
+                    <p class="slds-m-top_xx-small modal-header-subtitle">Financial breakdown for {valuationRecord.itemName} at {valuationRecord.locationName}</p>
+                </header>
+                
+                <!-- Modal Body -->
+                <div class="slds-modal__content slds-p-around_large modal-body-bg">
+                    <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_medium">
+                        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-3 slds-m-bottom_small">
+                            <div class="mini-kpi-card">
+                                <span class="mini-kpi-label">Active Unit Price</span>
+                                <span class="mini-kpi-value text-blue">{valuationRecord.formattedUnitPrice}</span>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-3 slds-m-bottom_small">
+                            <div class="mini-kpi-card">
+                                <span class="mini-kpi-label">On Hand Stock</span>
+                                <span class="mini-kpi-value text-slate-800">{valuationRecord.onHandQty}</span>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-3 slds-m-bottom_small">
+                            <div class="mini-kpi-card card-gradient-emerald">
+                                <span class="mini-kpi-label">Total Stock Value</span>
+                                <span class="mini-kpi-value text-green font-weight-bold">{valuationRecord.formattedTotalValuation}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="valuation-info-banner slds-p-around_small slds-m-top_small">
+                        <div class="slds-media slds-media_center">
+                            <div class="slds-media__figure">
+                                <lightning-icon icon-name="utility:info_alt" size="x-small" class="valuation-info-icon"></lightning-icon>
+                            </div>
+                            <div class="slds-media__body">
+                                <p class="text-xs text-slate-600">
+                                    Valuation is dynamically derived by multiplying the physical On-Hand quantity ({valuationRecord.onHandQty}) by the active Item Price ({valuationRecord.formattedUnitPrice}) in Indian Rupees (₹).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <footer class="slds-modal__footer modal-footer-bg">
+                    <button class="slds-button slds-button_brand modal-action-btn-primary" onclick={handleCloseValuationModal}>Done</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+</template>

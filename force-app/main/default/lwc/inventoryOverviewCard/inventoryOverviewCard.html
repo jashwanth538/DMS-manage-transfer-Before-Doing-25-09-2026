@@ -1,0 +1,583 @@
+<template>
+    <div class="inventory-card-container">
+        <!-- Loading Spinner -->
+        <template if:true={isLoading}>
+            <lightning-spinner alt-text="Loading Inventory Data..." size="medium" variant="brand"></lightning-spinner>
+        </template>
+
+        <!-- Main Card Wrapper -->
+        <article class="slds-card custom-card">
+            <!-- Header Section - Light Salesforce Theme -->
+            <div class="slds-card__header slds-grid header-banner">
+                <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                    <div class="slds-media__figure">
+                        <div class="icon-avatar-wrapper">
+                            <lightning-icon icon-name="standard:product_item" size="medium" title="Inventory Overview"></lightning-icon>
+                        </div>
+                    </div>
+                    <div class="slds-media__body">
+                        <h2 class="slds-card__header-title">
+                            <span class="slds-text-heading_small header-title-text">{recordName}</span>
+                        </h2>
+                        <div class="header-sub-details">
+                            <span class="sub-item">
+                                <lightning-icon icon-name="utility:package" size="x-small" class="sub-icon"></lightning-icon>
+                                <strong>Item:</strong> 
+                                <template if:true={itemId}>
+                                    <a href="#" onclick={handleItemClick} class="record-link">{itemName}</a>
+                                </template>
+                                <template if:false={itemId}>
+                                    <span class="text-muted">{itemName}</span>
+                                </template>
+                            </span>
+                            <span class="sub-divider">•</span>
+                            <span class="sub-item">
+                                <lightning-icon icon-name="utility:company" size="x-small" class="sub-icon"></lightning-icon>
+                                <strong>Location:</strong> 
+                                <template if:true={locationId}>
+                                    <a href="#" onclick={handleLocationClick} class="record-link">{locationName}</a>
+                                </template>
+                                <template if:false={locationId}>
+                                    <span class="text-muted">{locationName}</span>
+                                </template>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="slds-no-flex header-actions slds-grid slds-grid_vertical-align-center">
+                        <!-- Status Badge -->
+                        <span class={stockStatus.class}>
+                            <lightning-icon icon-name={stockStatus.icon} size="x-small" class="badge-icon"></lightning-icon>
+                            {stockStatus.label}
+                        </span>
+                        <!-- Refresh Button -->
+                        <lightning-button-icon 
+                            icon-name="utility:refresh" 
+                            variant="border-filled" 
+                            alternative-text="Refresh Inventory Data" 
+                            title="Refresh Data"
+                            onclick={handleRefresh}
+                            class="refresh-btn slds-m-left_x-small">
+                        </lightning-button-icon>
+                    </div>
+                </header>
+            </div>
+
+            <!-- Body Section -->
+            <div class="slds-card__body slds-card__body_inner card-content-body">
+
+                <!-- Error Toast / Alert -->
+                <template if:true={error}>
+                    <div class="slds-notify slds-notify_alert slds-alert_error slds-m-bottom_medium" role="alert">
+                        <span class="slds-assistive-text">error</span>
+                        <h2>Error loading Inventory record details: {errorMessage}</h2>
+                    </div>
+                </template>
+
+                <!-- KPI Metric Top Summary Grid -->
+                <div class="kpi-grid-container slds-m-bottom_large">
+                    <div class="kpi-card available-kpi">
+                        <div class="kpi-icon-box">
+                            <lightning-icon icon-name="utility:database" size="small" class="kpi-icon-available"></lightning-icon>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">Available Stock</span>
+                            <span class="kpi-value text-primary">
+                                <lightning-formatted-number value={availableQty}></lightning-formatted-number>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card onhand-kpi">
+                        <div class="kpi-icon-box">
+                            <lightning-icon icon-name="utility:cases" size="small" class="kpi-icon-onhand"></lightning-icon>
+                        </div>
+                        <div class="kpi-details">
+                            <span class="kpi-label">On Hand Qty</span>
+                            <span class="field-value metric-number">
+                                <lightning-formatted-number value={onHandQty}></lightning-formatted-number>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card reserved-kpi clickable-kpi" onclick={handleOpenSaleOrdersModal} title="Click to view related Sale Orders">
+                        <div class="kpi-icon-box">
+                            <lightning-icon icon-name="utility:lock" size="small" class="kpi-icon-reserved"></lightning-icon>
+                        </div>
+                        <div class="kpi-details">
+                            <div class="kpi-label-row">
+                                <span class="kpi-label">Total Reserved</span>
+                                <lightning-icon icon-name="utility:chevrondown" size="x-small" class="kpi-chevron"></lightning-icon>
+                            </div>
+                            <span class="kpi-value text-purple">
+                                <lightning-formatted-number value={totalReserved}></lightning-formatted-number>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 1: INVENTORY OVERVIEW -->
+                <section class="section-container slds-m-bottom_large">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <div class="section-icon-badge">
+                                <lightning-icon icon-name="standard:product" size="small"></lightning-icon>
+                            </div>
+                            <div>
+                                <h3 class="section-title">Inventory Overview</h3>
+                                <span class="section-subtitle">Core record identity and baseline quantities</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-wrap field-grid">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box">
+                                <span class="field-label">Inventory Name</span>
+                                <span class="field-value text-bold">{recordName}</span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box">
+                                <span class="field-label">Item</span>
+                                <span class="field-value">
+                                    <template if:true={itemId}>
+                                        <a href="#" onclick={handleItemClick} class="record-link text-bold">{itemName}</a>
+                                    </template>
+                                    <template if:false={itemId}>
+                                        <span class="text-muted">{itemName}</span>
+                                    </template>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box">
+                                <span class="field-label">Inventory Location</span>
+                                <span class="field-value">
+                                    <template if:true={locationId}>
+                                        <a href="#" onclick={handleLocationClick} class="record-link text-bold">{locationName}</a>
+                                    </template>
+                                    <template if:false={locationId}>
+                                        <span class="text-muted">{locationName}</span>
+                                    </template>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box">
+                                <span class="field-label">On Hand Qty</span>
+                                <span class="field-value metric-number">
+                                    <lightning-formatted-number value={onHandQty}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box accent-bg-available">
+                                <span class="field-label">Available Qty</span>
+                                <span class="field-value metric-number text-success">
+                                    <lightning-formatted-number value={availableQty}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class={damagedBoxClass}>
+                                <span class="field-label">Damaged Qty</span>
+                                <span class={damagedValueClass}>
+                                    <lightning-formatted-number value={damagedQty}></lightning-formatted-number>
+                                    <template if:true={hasDamagedStock}>
+                                        <lightning-icon icon-name="utility:warning" size="x-small" class="damaged-warning-icon slds-m-left_xx-small"></lightning-icon>
+                                    </template>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 2: STOCK AVAILABILITY & HEALTH GAUGE -->
+                <section class="section-container slds-m-bottom_large">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <div class="section-icon-badge">
+                                <lightning-icon icon-name="standard:dashboard" size="small"></lightning-icon>
+                            </div>
+                            <div>
+                                <h3 class="section-title">Stock Availability & Health</h3>
+                                <span class="section-subtitle">Real-time availability relative to target levels</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="health-gauge-card">
+                        <div class="gauge-header slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                            <span class="gauge-title">Stock Capacity Gauge</span>
+                            <span class="gauge-pct">{stockHealthPercent}% of Target</span>
+                        </div>
+
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" style={progressStyle}></div>
+                        </div>
+
+                        <div class="gauge-footer-metrics slds-grid slds-grid_align-spread slds-m-top_small">
+                            <div class="gauge-metric">
+                                <span class="lbl">Current Available</span>
+                                <span class="val text-primary"><lightning-formatted-number value={availableQty}></lightning-formatted-number></span>
+                            </div>
+                            <div class="gauge-metric">
+                                <span class="lbl">Reorder Threshold</span>
+                                <span class="val text-warning"><lightning-formatted-number value={reorderLevel}></lightning-formatted-number></span>
+                            </div>
+                            <div class="gauge-metric">
+                                <span class="lbl">Target Stock Level</span>
+                                <span class="val text-dark"><lightning-formatted-number value={targetStockLevel}></lightning-formatted-number></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 3: RESERVED QUANTITIES -->
+                <section class="section-container slds-m-bottom_large">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <div class="section-icon-badge">
+                                <lightning-icon icon-name="standard:approval" size="small"></lightning-icon>
+                            </div>
+                            <div>
+                                <h3 class="section-title">Reserved Quantities</h3>
+                                <span class="section-subtitle">Allocated stock commitments for sales orders (Click to view details)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-wrap field-grid">
+                        <!-- Reserved Sale Order Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 field-cell">
+                            <div class="field-box clickable-field-box" onclick={handleOpenSaleOrdersModal} title="Click to view Sale Orders">
+                                <div class="field-header-action">
+                                    <span class="field-label">Reserved Sale Order</span>
+                                    <lightning-button-icon icon-name="utility:open" size="x-small" variant="bare" class="action-view-btn"></lightning-button-icon>
+                                </div>
+                                <span class="field-value metric-number text-primary">
+                                    <lightning-formatted-number value={reservedSaleOrder}></lightning-formatted-number>
+                                </span>
+                                <span class="click-hint">View Sale Orders &rarr;</span>
+                            </div>
+                        </div>
+
+                        <!-- Total Allocated Stock Summary Card -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 field-cell">
+                            <div class="field-box total-reserved-box">
+                                <span class="field-label">Total Allocated Stock</span>
+                                <span class="field-value metric-number text-purple">
+                                    <lightning-formatted-number value={totalReserved}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 4: TRANSIT PIPELINE -->
+                <section class="section-container slds-m-bottom_large">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <div class="section-icon-badge">
+                                <lightning-icon icon-name="standard:shipment" size="small"></lightning-icon>
+                            </div>
+                            <div>
+                                <h3 class="section-title">Transit Pipeline</h3>
+                                <span class="section-subtitle">Stock currently in transit movement between locations</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-wrap field-grid">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 field-cell">
+                            <div class="field-box clickable-field-box" onclick={handleOpenTransitInModal} title="Click to view Transit In Orders">
+                                <div class="field-header-action">
+                                    <span class="field-label">Transit In Quantity</span>
+                                    <lightning-button-icon icon-name="utility:open" size="x-small" variant="bare" class="action-view-btn"></lightning-button-icon>
+                                </div>
+                                <span class="field-value metric-number text-teal">
+                                    <lightning-formatted-number value={transitInQty}></lightning-formatted-number>
+                                </span>
+                                <span class="click-hint">View Transit In &rarr;</span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 field-cell">
+                            <div class="field-box clickable-field-box" onclick={handleOpenTransitOutModal} title="Click to view Transit Out Orders">
+                                <div class="field-header-action">
+                                    <span class="field-label">Transit Out Quantity</span>
+                                    <lightning-button-icon icon-name="utility:open" size="x-small" variant="bare" class="action-view-btn"></lightning-button-icon>
+                                </div>
+                                <span class="field-value metric-number">
+                                    <lightning-formatted-number value={transitOutQty}></lightning-formatted-number>
+                                </span>
+                                <span class="click-hint">View Transit Out &rarr;</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 5: STOCK-LEVEL THRESHOLDS -->
+                <section class="section-container">
+                    <div class="section-header">
+                        <div class="section-title-wrap">
+                            <div class="section-icon-badge">
+                                <lightning-icon icon-name="standard:lead_insights" size="small"></lightning-icon>
+                            </div>
+                            <div>
+                                <h3 class="section-title">Stock-Level Thresholds</h3>
+                                <span class="section-subtitle">Min/Max limits, reorder points, and tier metrics</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slds-grid slds-wrap field-grid slds-m-bottom_small">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 field-cell">
+                            <div class="field-box threshold-highlight-reorder">
+                                <span class="field-label">Reorder Level</span>
+                                <span class="field-value metric-number text-warning">
+                                    <lightning-formatted-number value={reorderLevel}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 field-cell">
+                            <div class="field-box threshold-highlight-target">
+                                <span class="field-label">Target Stock Level</span>
+                                <span class="field-value metric-number text-primary">
+                                    <lightning-formatted-number value={targetStockLevel}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Level Tiers Grid -->
+                    <div class="slds-grid slds-wrap field-grid">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box tier-box low-tier">
+                                <div class="tier-badge-label">
+                                    <span class="tier-dot dot-low"></span>
+                                    <span class="field-label">Stock Low Level Qty</span>
+                                </div>
+                                <span class="field-value metric-number">
+                                    <lightning-formatted-number value={stockLowLevel}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box tier-box medium-tier">
+                                <div class="tier-badge-label">
+                                    <span class="tier-dot dot-medium"></span>
+                                    <span class="field-label">Stock Medium Level Qty</span>
+                                </div>
+                                <span class="field-value metric-number">
+                                    <lightning-formatted-number value={stockMediumLevel}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 field-cell">
+                            <div class="field-box tier-box high-tier">
+                                <div class="tier-badge-label">
+                                    <span class="tier-dot dot-high"></span>
+                                    <span class="field-label">Stock High Level Qty</span>
+                                </div>
+                                <span class="field-value metric-number">
+                                    <lightning-formatted-number value={stockHighLevel}></lightning-formatted-number>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </article>
+    </div>
+
+    <!-- MODAL DIALOG CONTAINER -->
+    <template if:true={isModalOpen}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading-01" class="slds-modal slds-fade-in-open slds-modal_large">
+            <div class="slds-modal__container">
+                <!-- Modal Header -->
+                <header class="slds-modal__header modal-header-banner">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={handleCloseModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <div class="slds-media slds-media_center">
+                        <div class="slds-media__figure">
+                            <div class="modal-icon-badge">
+                                <lightning-icon icon-name={modalIcon} size="medium"></lightning-icon>
+                            </div>
+                        </div>
+                        <div class="slds-media__body text-left">
+                            <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate modal-title-text">{modalTitle}</h2>
+                            <p class="modal-subtitle">Item: <strong>{itemName}</strong> • Warehouse: <strong>{locationName}</strong></p>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Modal Body -->
+                <div class="slds-modal__content slds-p-around_medium modal-content-area">
+                    <!-- Modal Spinner -->
+                    <template if:true={isModalLoading}>
+                        <div class="modal-spinner-container">
+                            <lightning-spinner alt-text="Loading records..." size="medium" variant="brand"></lightning-spinner>
+                        </div>
+                    </template>
+
+                    <template if:false={isModalLoading}>
+                        <!-- Empty Data State -->
+                        <template if:false={hasModalData}>
+                            <div class="empty-modal-state slds-text-align_center slds-p-around_large">
+                                <lightning-icon icon-name="utility:search" size="large" class="empty-icon"></lightning-icon>
+                                <h3 class="slds-text-heading_small slds-m-top_small">No related records found</h3>
+                                <p class="text-muted">There are currently no matching records for this inventory allocation.</p>
+                            </div>
+                        </template>
+
+                        <!-- Data Content -->
+                        <template if:true={hasModalData}>
+                            <!-- 1. SALE ORDERS MODAL TABLE -->
+                            <template if:true={isSaleOrderModal}>
+                                <div class="table-scroll-container">
+                                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped custom-modal-table">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th scope="col"><div class="slds-truncate">Reservation #</div></th>
+                                                <th scope="col"><div class="slds-truncate">Sale Order / Ref</div></th>
+                                                <th scope="col"><div class="slds-truncate">Customer / Account</div></th>
+                                                <th scope="col"><div class="slds-truncate">Reserved Qty</div></th>
+                                                <th scope="col"><div class="slds-truncate">Status</div></th>
+                                                <th scope="col"><div class="slds-truncate">Reservation Date</div></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={modalData} for:item="item">
+                                                <tr key={item.reservationId}>
+                                                    <td>
+                                                        <a href="#" data-id={item.reservationId} onclick={handleRecordNavigate} class="record-link text-bold">{item.reservationName}</a>
+                                                    </td>
+                                                    <td>
+                                                        <template if:true={item.saleOrderId}>
+                                                            <a href="#" data-id={item.saleOrderId} onclick={handleRecordNavigate} class="record-link">{item.saleOrderNumber}</a>
+                                                        </template>
+                                                        <template if:false={item.saleOrderId}>
+                                                            <span>{item.saleOrderNumber}</span>
+                                                        </template>
+                                                    </td>
+                                                    <td><span>{item.accountName}</span></td>
+                                                    <td>
+                                                        <span class="metric-number text-purple">
+                                                            <lightning-formatted-number value={item.reservedQty}></lightning-formatted-number>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="status-pill">{item.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <lightning-formatted-date-time value={item.reservationDate}></lightning-formatted-date-time>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+
+                            <!-- 2. MANUFACTURING ORDERS MODAL TABLE -->
+                            <template if:true={isManufacturingModal}>
+                                <div class="table-scroll-container">
+                                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped custom-modal-table">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th scope="col"><div class="slds-truncate">Manufacturing Order</div></th>
+                                                <th scope="col"><div class="slds-truncate">Item</div></th>
+                                                <th scope="col"><div class="slds-truncate">Warehouse</div></th>
+                                                <th scope="col"><div class="slds-truncate">Quantity</div></th>
+                                                <th scope="col"><div class="slds-truncate">Status</div></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={modalData} for:item="item">
+                                                <tr key={item.moId}>
+                                                    <td>
+                                                        <a href="#" data-id={item.moId} onclick={handleRecordNavigate} class="record-link text-bold">{item.moName}</a>
+                                                    </td>
+                                                    <td><span>{item.itemName}</span></td>
+                                                    <td><span>{item.warehouseName}</span></td>
+                                                    <td>
+                                                        <span class="metric-number text-primary">
+                                                            <lightning-formatted-number value={item.producedQty}></lightning-formatted-number>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="status-pill">{item.status}</span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+
+                            <!-- 3. INVENTORY TRANSFERS MODAL TABLE -->
+                            <template if:true={isTransferModal}>
+                                <div class="table-scroll-container">
+                                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped custom-modal-table">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th scope="col"><div class="slds-truncate">Transfer #</div></th>
+                                                <th scope="col"><div class="slds-truncate">Item</div></th>
+                                                <th scope="col"><div class="slds-truncate">Source Location</div></th>
+                                                <th scope="col"><div class="slds-truncate">Destination Location</div></th>
+                                                <th scope="col"><div class="slds-truncate">Transfer Qty</div></th>
+                                                <th scope="col"><div class="slds-truncate">Status</div></th>
+                                                <th scope="col"><div class="slds-truncate">Required Date</div></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={modalData} for:item="item">
+                                                <tr key={item.transferId}>
+                                                    <td>
+                                                        <a href="#" data-id={item.transferId} onclick={handleRecordNavigate} class="record-link text-bold">{item.transferName}</a>
+                                                    </td>
+                                                    <td><span>{item.itemName}</span></td>
+                                                    <td><span>{item.sourceLocationName}</span></td>
+                                                    <td><span>{item.destinationLocationName}</span></td>
+                                                    <td>
+                                                        <span class="metric-number text-teal">
+                                                            <lightning-formatted-number value={item.transferQty}></lightning-formatted-number>
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="status-pill">{item.status}</span>
+                                                    </td>
+                                                    <td>
+                                                        <lightning-formatted-date-time value={item.requiredDate}></lightning-formatted-date-time>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+                        </template>
+                    </template>
+                </div>
+
+                <!-- Modal Footer -->
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={handleCloseModal}>Close</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

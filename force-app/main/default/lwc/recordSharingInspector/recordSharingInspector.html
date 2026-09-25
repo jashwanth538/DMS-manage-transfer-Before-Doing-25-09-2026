@@ -1,0 +1,378 @@
+<template>
+    <!-- ===================================================================== -->
+    <!-- HEADER -->
+    <!-- ===================================================================== -->
+    <div class="inspector-container">
+        <div class="slds-page-header inspector-header">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <lightning-icon icon-name="standard:record" size="large"></lightning-icon>
+                        </div>
+                        <div class="slds-media__body">
+                            <h1 class="slds-page-header__title slds-truncate header-title">Record Sharing Inspector</h1>
+                            <p class="slds-page-header__name-meta header-subtitle">Generic Apex Managed Sharing Debugger — DMS</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- SEARCH BAR -->
+        <!-- ===================================================================== -->
+        <div class="slds-card search-card">
+            <div class="slds-grid slds-gutters slds-grid_vertical-align-end">
+                <div class="slds-col slds-size_8-of-12">
+                    <lightning-input
+                        label="Enter Record Id or Record Name / Auto Number"
+                        placeholder="e.g. PAY-00001, REC-00001, INV-00001, or Record Id"
+                        value={searchInput}
+                        onchange={handleSearchInputChange}
+                        onkeyup={handleKeyUp}
+                        class="search-input">
+                    </lightning-input>
+                </div>
+                <div class="slds-col slds-size_2-of-12">
+                    <lightning-button
+                        variant="brand"
+                        label="Inspect"
+                        title="Inspect Sharing"
+                        onclick={handleInspect}
+                        icon-name="utility:search"
+                        class="slds-m-left_x-small">
+                    </lightning-button>
+                </div>
+                <div class="slds-col slds-size_2-of-12">
+                    <lightning-button
+                        variant="neutral"
+                        label="Refresh"
+                        title="Refresh"
+                        onclick={handleRefresh}
+                        icon-name="utility:refresh"
+                        class="slds-m-left_x-small"
+                        disabled={isRefreshDisabled}>
+                    </lightning-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- SPINNER -->
+        <!-- ===================================================================== -->
+        <template if:true={isLoading}>
+            <div class="spinner-overlay">
+                <lightning-spinner alternative-text="Loading..." size="large" variant="brand"></lightning-spinner>
+            </div>
+        </template>
+
+        <!-- ===================================================================== -->
+        <!-- RESULTS -->
+        <!-- ===================================================================== -->
+        <template if:true={hasResult}>
+
+            <!-- ============================================================= -->
+            <!-- SUMMARY CARDS -->
+            <!-- ============================================================= -->
+            <div class="slds-grid slds-gutters slds-wrap summary-row">
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="summary-card summary-share">
+                        <div class="summary-count">{result.summary.totalShareRecords}</div>
+                        <div class="summary-label">Share Records</div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="summary-card summary-group">
+                        <div class="summary-count">{result.summary.totalPublicGroups}</div>
+                        <div class="summary-label">Public Groups</div>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="summary-card summary-user">
+                        <div class="summary-count">{result.summary.totalEffectiveUsers}</div>
+                        <div class="summary-label">Effective Users</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- RECORD DETAILS -->
+            <!-- ============================================================= -->
+            <div class="slds-card section-card">
+                <div class="slds-card__header">
+                    <h2 class="section-title">
+                        <lightning-icon icon-name="standard:record" size="small" class="slds-m-right_x-small"></lightning-icon>
+                        Record Details
+                    </h2>
+                </div>
+                <div class="slds-card__body slds-card__body_inner">
+                    <div class="slds-grid slds-wrap detail-grid">
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Object</span>
+                            <span class="detail-value">{result.recordDetail.objectName}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Record Name</span>
+                            <span class="detail-value">{result.recordDetail.recordName}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Record Id</span>
+                            <span class="detail-value detail-mono">{result.recordDetail.recordId}</span>
+                        </div>
+                        <template if:true={result.recordDetail.parentRecordId}>
+                            <div class="slds-col slds-size_1-of-2 detail-item">
+                                <span class="detail-label">Parent Header Record</span>
+                                <span class="detail-value">{result.recordDetail.parentRecordName} ({result.recordDetail.parentRecordId})</span>
+                            </div>
+                        </template>
+                        <template if:true={result.recordDetail.ownerName}>
+                            <div class="slds-col slds-size_1-of-2 detail-item">
+                                <span class="detail-label">Owner</span>
+                                <span class="detail-value">{result.recordDetail.ownerName}</span>
+                            </div>
+                        </template>
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Created By</span>
+                            <span class="detail-value">{result.recordDetail.createdByName}</span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Created Date</span>
+                            <span class="detail-value">
+                                <lightning-formatted-date-time value={result.recordDetail.createdDate} year="numeric" month="short" day="2-digit" hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                            </span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Last Modified</span>
+                            <span class="detail-value">
+                                <lightning-formatted-date-time value={result.recordDetail.lastModifiedDate} year="numeric" month="short" day="2-digit" hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                            </span>
+                        </div>
+                        <div class="slds-col slds-size_1-of-2 detail-item">
+                            <span class="detail-label">Sharing Account</span>
+                            <span class="detail-value">{displayAccountName}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- SHARE RECORDS -->
+            <!-- ============================================================= -->
+            <div class="slds-card section-card">
+                <div class="slds-card__header slds-grid slds-grid_align-spread">
+                    <h2 class="section-title">
+                        <lightning-icon icon-name="standard:sharing" size="small" class="slds-m-right_x-small"></lightning-icon>
+                        Share Records
+                        <span class="badge">{result.shareObjectApiName}</span>
+                    </h2>
+                    <lightning-button-icon
+                        icon-name="utility:copy_to_clipboard"
+                        title="Copy SOQL"
+                        alternative-text="Copy SOQL"
+                        onclick={handleCopySoql}
+                        variant="bare"
+                        class="slds-m-right_small">
+                    </lightning-button-icon>
+                </div>
+                <div class="slds-card__body">
+                    <template if:true={hasShareRecords}>
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered share-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Public Group / User</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Access Level</th>
+                                    <th scope="col">Row Cause</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={result.shareRecords} for:item="share">
+                                    <tr key={share.shareId}>
+                                        <td class="share-name">{share.userOrGroupName}</td>
+                                        <td><span class={share.typeClass}>{share.userOrGroupType}</span></td>
+                                        <td><span class={share.accessClass}>{share.accessLevel}</span></td>
+                                        <td><span class={share.causeClass}>{share.rowCause}</span></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                    <template if:false={hasShareRecords}>
+                        <div class="empty-state">
+                            <lightning-icon icon-name="utility:warning" variant="warning" size="small"></lightning-icon>
+                            <span class="slds-m-left_small">No share records found for this record.</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- PUBLIC GROUP MEMBERS (Accordion) -->
+            <!-- ============================================================= -->
+            <template if:true={hasGroups}>
+                <div class="slds-card section-card">
+                    <div class="slds-card__header">
+                        <h2 class="section-title">
+                            <lightning-icon icon-name="standard:groups" size="small" class="slds-m-right_x-small"></lightning-icon>
+                            Public Group Members
+                        </h2>
+                    </div>
+                    <div class="slds-card__body slds-card__body_inner">
+                        <lightning-accordion allow-multiple-sections-open>
+                            <template for:each={result.groupsWithMembers} for:item="grp">
+                                <lightning-accordion-section name={grp.groupId} label={grp.accordionLabel} key={grp.groupId}>
+                                    <template if:true={grp.hasMembers}>
+                                        <div class="member-list">
+                                            <template for:each={grp.members} for:item="member">
+                                                <div class="member-row" key={member.memberId}>
+                                                    <lightning-icon icon-name={member.iconName} size="xx-small" class="slds-m-right_x-small"></lightning-icon>
+                                                    <span class="member-name">{member.memberName}</span>
+                                                    <span class="member-type-badge">{member.memberType}</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template if:false={grp.hasMembers}>
+                                        <div class="empty-state">
+                                            <lightning-icon icon-name="utility:warning" variant="warning" size="small"></lightning-icon>
+                                            <span class="slds-m-left_small">This Public Group has no members.</span>
+                                        </div>
+                                    </template>
+                                </lightning-accordion-section>
+                            </template>
+                        </lightning-accordion>
+                    </div>
+                </div>
+            </template>
+
+            <!-- ============================================================= -->
+            <!-- EFFECTIVE USERS -->
+            <!-- ============================================================= -->
+            <div class="slds-card section-card">
+                <div class="slds-card__header">
+                    <h2 class="section-title">
+                        <lightning-icon icon-name="standard:user" size="small" class="slds-m-right_x-small"></lightning-icon>
+                        Effective Users with Access
+                    </h2>
+                </div>
+                <div class="slds-card__body slds-card__body_inner">
+                    <template if:true={hasEffectiveUsers}>
+                        <div class="effective-users-grid">
+                            <template for:each={result.effectiveUserNames} for:item="userName">
+                                <div class="effective-user-chip" key={userName}>
+                                    <lightning-icon icon-name="utility:check" size="xx-small" variant="success" class="slds-m-right_xx-small"></lightning-icon>
+                                    {userName}
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={hasEffectiveUsers}>
+                        <div class="empty-state">
+                            <lightning-icon icon-name="utility:info" variant="bare" size="small"></lightning-icon>
+                            <span class="slds-m-left_small">Only the Record Owner has access.</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- ACCOUNT MAPPING TABLE -->
+            <!-- ============================================================= -->
+            <div class="slds-card section-card">
+                <div class="slds-card__header">
+                    <h2 class="section-title">
+                        <lightning-icon icon-name="standard:account" size="small" class="slds-m-right_x-small"></lightning-icon>
+                        Account ↔ Public Group Mapping
+                    </h2>
+                </div>
+                <div class="slds-card__body">
+                    <template if:true={hasMappings}>
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered share-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Account</th>
+                                    <th scope="col">Mapped Public Group</th>
+                                    <th scope="col">Access Level</th>
+                                    <th scope="col">Active</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={result.accountMappings} for:item="mapping">
+                                    <tr key={mapping.mappingId}>
+                                        <td>{mapping.accountName}</td>
+                                        <td>{mapping.publicGroupName}</td>
+                                        <td>{mapping.accessLevel}</td>
+                                        <td>
+                                            <template if:true={mapping.isActive}>
+                                                <lightning-icon icon-name="utility:check" variant="success" size="xx-small"></lightning-icon>
+                                                <span class="slds-m-left_xx-small active-text">Active</span>
+                                            </template>
+                                            <template if:false={mapping.isActive}>
+                                                <lightning-icon icon-name="utility:close" variant="error" size="xx-small"></lightning-icon>
+                                                <span class="slds-m-left_xx-small inactive-text">Inactive</span>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </template>
+                    <template if:false={hasMappings}>
+                        <div class="empty-state">
+                            <lightning-icon icon-name="utility:warning" variant="warning" size="small"></lightning-icon>
+                            <span class="slds-m-left_small">No Account_Public_Group_Mapping__c records found.</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- DIAGNOSTICS -->
+            <!-- ============================================================= -->
+            <div class="slds-card section-card">
+                <div class="slds-card__header">
+                    <h2 class="section-title">
+                        <lightning-icon icon-name="standard:diagnosis" size="small" class="slds-m-right_x-small"></lightning-icon>
+                        Sharing Diagnostics
+                    </h2>
+                </div>
+                <div class="slds-card__body slds-card__body_inner">
+                    <div class="diagnostics-grid">
+                        <template for:each={result.diagnostics} for:item="diag">
+                            <div class={diag.containerClass} key={diag.label}>
+                                <div class="diag-header">
+                                    <lightning-icon icon-name={diag.iconName} variant={diag.iconVariant} size="xx-small"></lightning-icon>
+                                    <span class="diag-label slds-m-left_x-small">{diag.label}</span>
+                                </div>
+                                <div class="diag-message">{diag.message}</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- ACTIONS -->
+            <!-- ============================================================= -->
+            <div class="slds-card section-card action-bar">
+                <lightning-button
+                    variant="neutral"
+                    label="Copy JSON"
+                    title="Copy full inspection result as JSON"
+                    icon-name="utility:copy_to_clipboard"
+                    onclick={handleCopyJson}
+                    class="slds-m-right_small">
+                </lightning-button>
+                <lightning-button
+                    variant="neutral"
+                    label="Copy SOQL"
+                    title="Copy share record SOQL query"
+                    icon-name="utility:snippet"
+                    onclick={handleCopySoql}
+                    class="slds-m-right_small">
+                </lightning-button>
+            </div>
+        </template>
+    </div>
+</template>
